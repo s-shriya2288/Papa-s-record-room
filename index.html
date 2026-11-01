@@ -23,6 +23,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { background: var(--walnut); color: var(--paper); }
 body {
   font-family: var(--body); font-size: 16px; line-height: 1.55;
@@ -409,7 +410,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     <div class="clock" id="clock">50:00<small id="clockSub">Ready when you are</small></div>
   </section>
 
-  <footer>Made with love for Papa. The music is played live by this page, so every spin sounds a little different.</footer>
+  <footer>Made with love for Papa. Every record on this turntable is one of his own favourites.</footer>
 </div>
 
 <div class="overlay" id="photoModal" hidden>
@@ -475,12 +476,13 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     <div class="eyebrow">Intermission</div>
     <h3 id="bmTitle">Set's over. Time for a break.</h3>
     <img class="pic" id="bmImg" alt="" hidden>
-    <p class="hint" id="bmCap">Stand up, drink some water, and listen to a song before the next set.</p>
+    <p class="hint" id="bmCap">Stand up, drink some water, and listen to one of your favourites before the next set.</p>
     <div class="row">
+      <button class="btn primary" id="bmPlay" hidden>Play a favourite</button>
       <button class="btn" id="bmSend">Send this one</button>
       <div class="controls">
         <button class="btn" id="bmAgain">Start next set</button>
-        <button class="btn primary" id="bmClose">Done</button>
+        <button class="btn" id="bmClose">Done</button>
       </div>
     </div>
   </div>
@@ -502,17 +504,14 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200);
   }
 
-  /* ---------- Music: played live with Web Audio ---------- */
-  const MOODS = [
-    { key: "raag", name: "Raag Bhupali at dusk", bpm: 64 },
-    { key: "jazz", name: "Sunday morning jazz", bpm: 84 },
-    { key: "rain", name: "Rainy evening lo-fi", bpm: 72 },
-  ];
-  let moodIdx = 0;
-  const REAL = 3; // the mood slot for uploaded song files
-  try { moodIdx = Math.min(REAL, Math.max(0, +localStorage.getItem("prr-mood") || 0)); } catch (e) {}
+  /* ---------- Music: his own favourites ---------- */
+  // The turntable plays his favourites: uploaded song files play right here; playlist songs
+  // open in YouTube Music (it can't be embedded), while the record keeps spinning with the photos.
+  let src = "all";
+  try { src = localStorage.getItem("prr-src") || "all"; } catch (e) {}
   const R = { audio: $("recAudio"), playing: false, i: 0, slide: null };
-  const A ={ ctx: null, master: null, out: null, playing: false, next: 0, step: 0, timer: null, crackle: null };
+  const Y = { playing: false, song: null };
+  const A = { ctx: null, master: null, out: null }; // only for the break chime
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
 
   function ensureAudio() {
@@ -520,141 +519,107 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return Promise.reject();
     A.ctx = new Ctx();
-    A.master = A.ctx.createGain();
-    A.master.gain.value = 0;
-    const comp = A.ctx.createDynamicsCompressor();
-    comp.threshold.value = -18; comp.ratio.value = 3;
+    A.master = A.ctx.createGain(); A.master.gain.value = 1;
     const vol = A.ctx.createGain(); vol.gain.value = $("vol").value / 100;
-    A.out = vol;
-    // soft room reverb from a decaying noise impulse
-    const rev = A.ctx.createConvolver();
-    const len = A.ctx.sampleRate * 2.6, ir = A.ctx.createBuffer(2, len, A.ctx.sampleRate);
-    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
-    rev.buffer = ir;
-    const wet = A.ctx.createGain(); wet.gain.value = .28;
-    A.master.connect(comp); A.master.connect(rev); rev.connect(wet); wet.connect(comp);
-    comp.connect(vol); vol.connect(A.ctx.destination);
+    A.out = vol; A.master.connect(vol); vol.connect(A.ctx.destination);
     return A.ctx.resume();
   }
 
   function voice(freq, t, dur, o = {}) {
     const c = A.ctx, g = c.createGain(), f = c.createBiquadFilter();
-    f.type = "lowpass"; f.frequency.value = o.cut || 2400; f.Q.value = o.q || .5;
-    const oscs = (o.types || ["sine"]).map((type, i) => {
+    f.type = "lowpass"; f.frequency.value = o.cut || 2400;
+    (o.types || ["sine"]).forEach(type => {
       const osc = c.createOscillator(); osc.type = type; osc.frequency.value = freq;
-      osc.detune.value = (o.detune || 0) * (i % 2 ? 1 : -1);
-      if (o.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 5.2; lg.gain.value = o.vib; l.connect(lg); lg.connect(osc.frequency); l.start(t); l.stop(t + dur + 1.5); }
-      osc.connect(f); osc.start(t); osc.stop(t + dur + (o.rel || .8) + .1); return osc;
+      osc.connect(f); osc.start(t); osc.stop(t + dur + (o.rel || .8) + .1);
     });
-    if (o.sweep) { f.frequency.setValueAtTime(o.sweep, t); f.frequency.exponentialRampToValueAtTime(o.cut || 900, t + Math.min(dur, 1.2)); }
-    const peak = (o.gain || .12) / oscs.length;
+    const peak = (o.gain || .12) / (o.types || ["sine"]).length;
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(peak, t + (o.att || .02));
-    if (o.pluck) g.gain.exponentialRampToValueAtTime(peak * .02, t + dur);
-    else { g.gain.setValueAtTime(peak, t + dur); }
+    g.gain.linearRampToValueAtTime(peak, t + .02);
+    g.gain.exponentialRampToValueAtTime(peak * .02, t + dur);
     g.gain.linearRampToValueAtTime(0, t + dur + (o.rel || .8));
     f.connect(g); g.connect(A.master);
   }
 
-  function startCrackle(amount) {
-    const c = A.ctx, len = c.sampleRate * 4, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
-    for (let i = 0; i < len; i++) { d[i] = (Math.random() * 2 - 1) * .012; if (Math.random() < .00035) d[i] = (Math.random() * 2 - 1) * .5; }
-    const src = c.createBufferSource(); src.buffer = b; src.loop = true;
-    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 900;
-    const g = c.createGain(); g.gain.value = amount;
-    src.connect(hp); hp.connect(g); g.connect(A.master); src.start();
-    A.crackle = src;
+  function sources() {
+    const list = [];
+    if (S.records.length) list.push({ key: "real", name: "Plays right here · " + S.records.length });
+    const packs = (S.packs || []).filter(p => (p.list || []).length), fam = S.songs || [];
+    if (packs.length > 1 || (packs.length && fam.length)) list.push({ key: "all", name: "All his favourites" });
+    packs.forEach(p => list.push({ key: "pack:" + p.id, name: (p.pack || p.name || "Playlist") + " · " + p.list.length }));
+    if (fam.length) list.push({ key: "family", name: "Added by family · " + fam.length });
+    return list;
+  }
+  function currentSource() {
+    const list = sources();
+    return list.find(x => x.key === src) || list[0] || null;
+  }
+  function poolFor(key) {
+    if (key === "family") return S.songs;
+    if (key && key.startsWith("pack:")) { const p = S.packs.find(x => "pack:" + x.id === key); return p ? p.list.map(r => fromPack(p, r)) : []; }
+    return allSongs();
+  }
+  function pickFavourite() {
+    const pool = poolFor(currentSource() && currentSource().key);
+    if (!pool.length) return null;
+    let s, tries = 0;
+    do { s = pool[Math.floor(Math.random() * pool.length)]; } while (Y.song && s.title === Y.song.title && pool.length > 1 && ++tries < 5);
+    return s;
   }
 
-  // Bhupali: Sa Re Ga Pa Dha, here in C (C D E G A)
-  const BHUP = [48, 50, 52, 55, 57, 60, 62, 64, 67, 69, 72];
-  let mel = 5;
-  const JAZZ = [[48, [64, 67, 71, 74]], [45, [64, 67, 72, 76]], [50, [65, 69, 72, 76]], [43, [65, 69, 71, 74]]]; // Cmaj9 Am7 Dm9 G13ish
-  const RAIN = [[41, [64, 69, 72, 76]], [40, [62, 67, 71, 74]], [38, [60, 65, 69, 72]], [36, [59, 64, 67, 71]]];
-
-  function schedule(t, step) {
-    const m = MOODS[moodIdx], beat = 60 / m.bpm;
-    if (m.key === "raag") {
-      // tanpura cycle: Pa(low) Sa Sa Sa(low), each string ringing long
-      const tan = [43, 48, 48, 36][step % 4];
-      voice(hz(tan), t, beat * 3.6, { types: ["sawtooth", "triangle"], cut: 1300, sweep: 3200, gain: .07, pluck: true, rel: 1.2, detune: 4 });
-      if (step % 2 === 0 && Math.random() < .8) {
-        mel = Math.max(0, Math.min(BHUP.length - 1, mel + [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)]));
-        const len = beat * (Math.random() < .3 ? 3 : 1.6);
-        voice(hz(BHUP[mel] + 12), t + (Math.random() < .3 ? beat / 2 : 0), len, { types: ["sine", "triangle"], gain: .085, att: .06, vib: 2.5, rel: 1, cut: 3000 });
-      }
-    } else {
-      const prog = m.key === "jazz" ? JAZZ : RAIN, bar = Math.floor(step / 4) % prog.length, b4 = step % 4;
-      const [bass, chord] = prog[bar];
-      const rhodes = { types: ["sine", "triangle"], detune: 6, gain: m.key === "rain" ? .09 : .11, cut: m.key === "rain" ? 1100 : 2600, att: .01, pluck: true, rel: 1.4 };
-      if (b4 === 0) chord.forEach((n, i) => voice(hz(n), t + i * .018, beat * 3.6, rhodes));
-      if (m.key === "jazz" && b4 === 2 && Math.random() < .6) chord.slice(1).forEach(n => voice(hz(n), t + beat * .5, beat, rhodes));
-      // bass: walking for jazz, root-and-fifth for rain
-      const walk = m.key === "jazz" ? [0, 7, 9, 11][b4] : [0, 0, 7, 0][b4];
-      if (m.key === "jazz" || b4 !== 1) voice(hz(bass - 12 + walk), t, beat * .9, { types: ["sine"], gain: .16, cut: 500, pluck: true, rel: .2 });
-      // brushes / soft kick
-      if (m.key === "rain" && (b4 === 0 || b4 === 2)) voice(55, t, .25, { types: ["sine"], gain: .18, cut: 200, pluck: true, rel: .1 });
-      if (Math.random() < .45 && b4 % 2 === 1) {
-        const top = chord[Math.floor(Math.random() * chord.length)] + 12;
-        voice(hz(top), t + beat * (Math.random() < .5 ? 0 : .5), beat * 1.2, { types: ["sine"], gain: .05, vib: 1.5, rel: .9 });
-      }
-    }
+  function startSlides() {
+    clearInterval(R.slide);
+    if (S.photos.length > 1) R.slide = setInterval(() => show(S.idx + 1), 14000);
   }
-
-  function tick() {
-    const beat = 60 / MOODS[moodIdx].bpm;
-    while (A.next < A.ctx.currentTime + .25) { schedule(A.next, A.step++); A.next += beat; }
+  function playFavourite(s) {
+    s = s || pickFavourite();
+    if (!s) { toast("His playlists are still loading. Try again in a moment."); return; }
+    if (R.playing) { R.audio.pause(); R.playing = false; }
+    Y.song = s; Y.playing = true;
+    window.open(songUrl(s), "_blank", "noopener");
+    renderPlay(); renderCrate(); startSlides();
   }
-
-  async function play() {
-    if (moodIdx === REAL) {
-      if (S.records.length) return playReal(R.i);
-      moodIdx = 0; renderMoods();
-    }
-    try { await ensureAudio(); } catch (e) { toast("This browser can't play the music."); return; }
-    if (A.playing) return;
-    A.playing = true; A.step = 0; A.next = A.ctx.currentTime + .9; // let the needle land first
-    A.master.gain.cancelScheduledValues(A.ctx.currentTime);
-    A.master.gain.setTargetAtTime(1, A.ctx.currentTime + .5, .4);
-    startCrackle(MOODS[moodIdx].key === "rain" ? 1.2 : .7);
-    A.timer = setInterval(tick, 80);
-    renderPlay();
+  function play() {
+    const c = currentSource();
+    if (c && c.key === "real") return playReal(R.i);
+    playFavourite();
   }
   function stop() {
-    if (R.playing) { R.audio.pause(); R.playing = false; clearInterval(R.slide); renderPlay(); return; }
-    if (!A.playing) return;
-    A.playing = false; clearInterval(A.timer);
-    A.master.gain.setTargetAtTime(0, A.ctx.currentTime, .25);
-    const cr = A.crackle; setTimeout(() => { try { cr && cr.stop(); } catch (e) {} }, 1200);
-    renderPlay();
+    if (R.playing) R.audio.pause();
+    R.playing = false; Y.playing = false; clearInterval(R.slide);
+    renderPlay(); renderCrate();
   }
   function renderPlay() {
-    const on = A.playing || R.playing;
+    const on = Y.playing || R.playing;
     $("table").classList.toggle("playing", on);
     $("playBtn").setAttribute("aria-pressed", on);
     $("playText").textContent = on ? "Lift the needle" : "Drop the needle";
     $("playIcon").innerHTML = on ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
   }
-  $("playBtn").onclick = () => (A.playing || R.playing) ? stop() : play();
+  $("playBtn").onclick = () => (Y.playing || R.playing) ? stop() : play();
 
   /* ---------- His real records: uploaded song files ---------- */
   const mmss = s => isFinite(s) ? Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0") : "0:00";
   function playReal(i) {
     const n = S.records.length; if (!n) return;
-    if (A.playing) { A.playing = false; clearInterval(A.timer); A.master.gain.setTargetAtTime(0, A.ctx.currentTime, .25); try { A.crackle && A.crackle.stop(); } catch (e) {} }
+    Y.playing = false;
     R.i = (i + n) % n;
     const r = S.records[R.i];
-    if (moodIdx !== REAL) { moodIdx = REAL; renderMoods(); }
+    if (src !== "real") { src = "real"; renderMoods(); }
     R.audio.src = blobUrl(r.asset);
     R.audio.play().catch(() => { R.playing = false; renderPlay(); toast("This song couldn't play here. Try another file format."); });
-    R.playing = true; renderPlay(); renderCrate();
-    clearInterval(R.slide);
-    if (S.photos.length > 1) R.slide = setInterval(() => show(S.idx + 1), 14000);
+    R.playing = true; renderPlay(); renderCrate(); startSlides();
   }
   function renderCrate() {
-    const show_ = moodIdx === REAL && S.records.length > 0;
-    $("crate").hidden = !show_;
-    if (!show_) return;
+    const yt = Y.playing && Y.song, here = !yt && src === "real" && S.records.length > 0;
+    $("crate").hidden = !(yt || here);
+    $("npBarWrap").hidden = $("recPrev").hidden = !here;
+    $("npTime").hidden = !here;
+    $("recNext").textContent = here ? "Next song" : "Another favourite";
+    if (yt) {
+      $("npTitle").textContent = "Playing in YouTube Music: " + Y.song.title + (Y.song.artist ? " · " + Y.song.artist : "");
+      return;
+    }
+    if (!here) return;
     const r = S.records[R.i] || S.records[0];
     $("npTitle").textContent = r.title + (r.artist ? " · " + r.artist : "");
     const d = R.audio.duration, t = R.audio.currentTime || 0;
@@ -665,7 +630,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   R.audio.addEventListener("loadedmetadata", renderCrate);
   R.audio.addEventListener("ended", () => playReal(R.i + 1));
   $("recPrev").onclick = () => playReal(R.audio.currentTime > 4 ? R.i : R.i - 1);
-  $("recNext").onclick = () => playReal(R.i + 1);
+  $("recNext").onclick = () => Y.playing ? playFavourite() : playReal(R.i + 1);
   $("npBarWrap").addEventListener("click", e => {
     const b = e.currentTarget.getBoundingClientRect();
     if (R.audio.duration) R.audio.currentTime = (e.clientX - b.left) / b.width * R.audio.duration;
@@ -732,23 +697,26 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
         await new Promise(r => setTimeout(r, 2500));
       }
     }
-    if (done) toast(done + (done === 1 ? " song is" : " songs are") + " on the turntable now. Pick “His real records”.");
+    if (done) toast(done + (done === 1 ? " song is" : " songs are") + " on the turntable now. Pick “Plays right here”.");
   };
   $("vol").oninput = e => { if (A.out) A.out.gain.value = e.target.value / 100; };
 
   function renderMoods() {
     $("moods").innerHTML = "";
-    const list = S.records.length ? [...MOODS, { name: "His real records · " + S.records.length }] : MOODS;
-    list.forEach((m, i) => {
+    const c = currentSource();
+    sources().forEach(m => {
       const b = document.createElement("button");
-      b.textContent = m.name; b.setAttribute("aria-pressed", i === moodIdx);
+      b.textContent = m.name; b.setAttribute("aria-pressed", !!c && m.key === c.key);
       b.onclick = () => {
-        moodIdx = i; try { localStorage.setItem("prr-mood", i); } catch (e) {}
+        src = m.key; try { localStorage.setItem("prr-src", src); } catch (e) {}
+        const was = Y.playing || R.playing;
+        if (was) stop();
         renderMoods(); renderCrate();
-        if (A.playing || R.playing) { stop(); setTimeout(play, 400); }
+        if (was) play();
       };
       $("moods").appendChild(b);
     });
+    if (!c) $("moods").innerHTML = '<span class="hint">His playlists load when the page is opened signed in.</span>';
   }
   renderMoods();
 
@@ -1155,7 +1123,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   });
   async function startSet() {
     ensureAudio().catch(() => {}); // unlock audio now, while we have the click
-    if (A.playing) stop();
+    if (Y.playing || R.playing) stop();
     T.end = Date.now() + T.mins * 60000;
     T.iv = setInterval(() => { if (Date.now() >= T.end) endSet(); else renderClock(); }, 500);
     renderPresets(); renderClock();
@@ -1173,9 +1141,15 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   }
   function endSet() {
     clearSet();
-    if (A.ctx) { A.master.gain.cancelScheduledValues(A.ctx.currentTime); A.master.gain.setValueAtTime(1, A.ctx.currentTime); }
     chime();
-    setTimeout(play, 1800);
+    // Uploaded songs can start on their own; a YouTube Music song needs his tap to open.
+    const c = currentSource();
+    if (c && c.key === "real") { setTimeout(() => playReal(Math.floor(Math.random() * S.records.length)), 1800); $("bmPlay").hidden = true; }
+    else {
+      T.song = pickFavourite();
+      $("bmPlay").hidden = !T.song;
+      if (T.song) $("bmPlay").textContent = "Play “" + T.song.title + "”";
+    }
     const n = S.photos.length;
     if (n) {
       show(Math.floor(Math.random() * n), false);
@@ -1189,6 +1163,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   }
   $("setBtn").onclick = () => T.iv ? clearSet() : startSet();
   $("resetBtn").onclick = () => { clearSet(); };
+  $("bmPlay").onclick = () => { playFavourite(T.song); $("bmPlay").hidden = true; };
   $("bmClose").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; };
   $("bmAgain").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; startSet(); };
   $("bmSend").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; window.scrollTo({ top: 0, behavior: "smooth" }); toast("Copy or save it, then open WhatsApp."); };
@@ -1227,7 +1202,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       S.packs = docs.filter(d => Array.isArray(d.list)).sort((a, b) => (a.order || 0) - (b.order || 0));
       S.songs = docs.filter(s => !Array.isArray(s.list) && s.title).sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
-      renderSongs();
+      renderSongs(); renderMoods();
     }, () => {});
     db.collection("records").onSnapshot(snap => {
       const playingId = R.playing && S.records[R.i] && S.records[R.i].id;
