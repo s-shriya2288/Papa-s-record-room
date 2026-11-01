@@ -187,6 +187,13 @@ header.top h1 em { font-style: normal; color: var(--brass); }
 .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .presets button { border: 1px solid var(--line); background: transparent; color: var(--paper); border-radius: 8px; padding: 8px 14px; font-family: var(--mono); font-size: 14px; }
 .presets button[aria-pressed="true"] { background: var(--brass); color: #22170f; border-color: var(--brass); }
+.adjust { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; flex-wrap: wrap; }
+.adjust label { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.adjust button { border: 1px solid var(--line); background: transparent; color: var(--paper); border-radius: 8px; min-width: 44px; height: 40px; font-family: var(--mono); font-size: 15px; }
+.adjust button:disabled { opacity: .4; }
+.adjust input { width: 72px; height: 40px; text-align: center; font-family: var(--mono); font-size: 16px; color: var(--paper); background: #120d0b; border: 1px solid var(--line); border-radius: 8px; }
+.adjust input:disabled { color: var(--muted); }
+.adjust .unit { font-family: var(--mono); font-size: 14px; color: var(--muted); }
 
 /* Overlays */
 .overlay {
@@ -381,11 +388,18 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     <div>
       <div class="eyebrow">Intermission</div>
       <h2 id="interHead" style="font-size:clamp(28px,4vw,40px)">Work in sets, Papa. Even the best bands take a break.</h2>
-      <p>Start a work set. When it ends, a record starts playing and a family photo shows up, so you get up, stretch, and maybe send it to the group before the next set.</p>
+      <p>Start a work set. When it ends, a record starts playing and a family photo shows up, so you get up, stretch, and maybe send it to the group before the next set. Pick any length you like, and use −5 or +5 to change it mid-set if the work runs long.</p>
       <div class="presets" id="presets">
         <button data-min="25" aria-pressed="false">25 min</button>
         <button data-min="50" aria-pressed="true">50 min</button>
         <button data-min="90" aria-pressed="false">90 min</button>
+      </div>
+      <div class="adjust">
+        <label for="minInput">Or set your own</label>
+        <button id="minDown" aria-label="5 minutes less">−5</button>
+        <input id="minInput" type="number" inputmode="numeric" min="1" max="240" step="1" value="50">
+        <span class="unit">min</span>
+        <button id="minUp" aria-label="5 minutes more">+5</button>
       </div>
       <div class="controls">
         <button class="btn primary" id="setBtn">Start the set</button>
@@ -1101,11 +1115,33 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
 
   /* ---------- Intermission timer ---------- */
   const T = { mins: 50, end: 0, iv: null, wake: null };
-  try { T.mins = +localStorage.getItem("prr-mins") || 50; } catch (e) {}
+  const clampMins = m => Math.min(240, Math.max(1, Math.round(m) || 1));
+  try { T.mins = clampMins(+localStorage.getItem("prr-mins") || 50); } catch (e) {}
   const fmt = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(Math.floor(s % 60)).padStart(2, "0");
   function renderPresets() {
     document.querySelectorAll("#presets button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.min === T.mins));
+    const inp = $("minInput"), running = !!T.iv;
+    if (document.activeElement !== inp) inp.value = T.mins;
+    inp.disabled = running;
+    // While a set is running, the buttons move the break time instead.
+    $("minDown").setAttribute("aria-label", running ? "End the set 5 minutes sooner" : "5 minutes less");
+    $("minUp").setAttribute("aria-label", running ? "Work 5 minutes more" : "5 minutes more");
+    $("minDown").disabled = !running && T.mins <= 1;
+    $("minUp").disabled = !running && T.mins >= 240;
   }
+  function setMins(m) {
+    T.mins = clampMins(m); try { localStorage.setItem("prr-mins", T.mins); } catch (e) {}
+    renderPresets(); renderClock();
+  }
+  function nudge(d) {
+    if (!T.iv) return setMins(T.mins + d);
+    T.end = Math.max(Date.now() + 60000, T.end + d * 60000);
+    renderPresets(); renderClock();
+  }
+  $("minDown").onclick = () => nudge(-5);
+  $("minUp").onclick = () => nudge(5);
+  $("minInput").onchange = e => setMins(+e.target.value);
+  $("minInput").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
   function renderClock() {
     const running = !!T.iv, left = running ? Math.max(0, (T.end - Date.now()) / 1000) : T.mins * 60;
     $("clock").firstChild.nodeValue = fmt(Math.ceil(left));
@@ -1115,21 +1151,20 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   }
   document.querySelectorAll("#presets button").forEach(b => b.onclick = () => {
     if (T.iv) return;
-    T.mins = +b.dataset.min; try { localStorage.setItem("prr-mins", T.mins); } catch (e) {}
-    renderPresets(); renderClock();
+    setMins(+b.dataset.min);
   });
   async function startSet() {
     ensureAudio().catch(() => {}); // unlock audio now, while we have the click
     if (A.playing) stop();
     T.end = Date.now() + T.mins * 60000;
     T.iv = setInterval(() => { if (Date.now() >= T.end) endSet(); else renderClock(); }, 500);
+    renderPresets(); renderClock();
     try { T.wake = await navigator.wakeLock.request("screen"); } catch (e) {}
-    renderClock();
   }
   function clearSet() {
     clearInterval(T.iv); T.iv = null;
     try { T.wake && T.wake.release(); } catch (e) {} T.wake = null;
-    renderClock();
+    renderPresets(); renderClock();
   }
   function chime() {
     if (!A.ctx) return;
