@@ -138,6 +138,11 @@ header.top h1 em { font-style: normal; color: var(--brass); }
 .send { border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-direction: column; gap: 10px; }
 .send .row { display: flex; flex-wrap: wrap; gap: 10px; }
 .hint { font-size: 13px; color: var(--muted); margin: 0; }
+/* The photo itself, uncropped, so he can see exactly what he's about to send. */
+.snap { margin: 0; background: var(--paper); padding: 10px 10px 8px; border-radius: 4px; box-shadow: 0 14px 30px -12px rgba(0,0,0,.7); transform: rotate(-1.2deg); max-width: 420px; }
+.snap img:not([hidden]) { display: block; width: 100%; max-height: 340px; object-fit: contain; background: #e6d8bf; }
+.snap figcaption { font-family: var(--display); color: #2a1c10; font-size: 15px; padding-top: 6px; text-align: center; }
+.snap .miss:not([hidden]) { display: grid; place-items: center; aspect-ratio: 4/3; color: #6b5440; font-size: 14px; text-align: center; padding: 16px; background: #e6d8bf; }
 .vol { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
 .vol input { accent-color: var(--brass); width: 140px; }
 
@@ -311,6 +316,11 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
 
       <div class="send">
         <div class="eyebrow">Send this one to the family group</div>
+        <figure class="snap" id="snap" hidden>
+          <img id="snapImg" alt="">
+          <div class="miss" id="snapMiss" hidden>This photo couldn't load. Reload the page, or remove it and add it again.</div>
+          <figcaption id="snapCap"></figcaption>
+        </figure>
         <div class="row">
           <button class="btn" id="copyBtn">Copy photo</button>
           <button class="btn" id="saveBtn">Save photo</button>
@@ -763,6 +773,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       $("year").textContent = ""; $("countLine").textContent = "";
       ["copyBtn", "saveBtn", "shuffleBtn", "prevBtn", "nextBtn"].forEach(id => $(id).disabled = true);
       $("waLink").href = "https://wa.me/";
+      $("snap").hidden = true;
       return;
     }
     ["copyBtn", "saveBtn", "shuffleBtn", "prevBtn", "nextBtn"].forEach(id => $(id).disabled = false);
@@ -770,6 +781,11 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     label.innerHTML = "";
     const img = new Image(); img.src = blobUrl(p.asset); img.alt = p.caption || "Family photo";
     label.appendChild(img);
+    const snap = $("snapImg");
+    $("snap").hidden = false; $("snapMiss").hidden = true; $("snapImg").hidden = false;
+    snap.onerror = () => { snap.hidden = true; $("snapMiss").hidden = false; };
+    snap.src = blobUrl(p.asset); snap.alt = p.caption || "Family photo";
+    $("snapCap").textContent = [p.caption, p.year].filter(Boolean).join(" · ");
     const side = S.idx < Math.ceil(n / 2) ? "A" : "B";
     $("trackNo").textContent = (S.idx === todayIndex(n) ? "Today's spin · " : "") + "Side " + side + " · Track " + String(S.idx + 1).padStart(2, "0");
     $("caption").textContent = p.caption || "Untitled family moment";
