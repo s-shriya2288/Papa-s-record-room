@@ -1,0 +1,1192 @@
+<title>Papa's Record Room</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a listening room. Turntable on the left, the deck's info card on the right,
+   then the record sleeves as a track list, then the Intermission timer. One dark walnut look, on purpose. */
+:root {
+  --walnut: #1d1512;
+  --plinth: #2a1f1a;
+  --plinth-hi: #3a2b23;
+  --vinyl: #0f0c0b;
+  --brass: #d6a85a;
+  --brass-dim: #8f6f3c;
+  --paper: #f1e6d2;
+  --muted: #b6a48c;
+  --line: #4a382d;
+  --live: #e2694a;
+  --ok: #8fbf7f;
+  --display: "Gloock", "Bodoni 72", "Didot", Georgia, serif;
+  --body: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--walnut); color: var(--paper); }
+body {
+  font-family: var(--body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+  background:
+    radial-gradient(ellipse 80% 50% at 30% 0%, #3a2418 0%, transparent 70%),
+    var(--walnut);
+  min-height: 100%;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: .005em; }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--brass); }
+button, .btn { font: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 6px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--plinth); color: var(--paper); font-size: 15px; font-weight: 600;
+  text-decoration: none; transition: background .15s, border-color .15s, transform .1s;
+}
+.btn:hover { background: var(--plinth-hi); border-color: var(--brass-dim); }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--brass); color: #22170f; border-color: var(--brass); }
+.btn.primary:hover { background: #e4b96c; }
+.btn.wa { background: #1f3b2b; border-color: #2f6b45; }
+.btn.wa:hover { background: #24503a; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn svg { width: 18px; height: 18px; flex: none; }
+
+/* Header */
+header.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; }
+header.top h1 { font-size: clamp(38px, 7vw, 72px); line-height: .95; }
+header.top h1 em { font-style: normal; color: var(--brass); }
+.liner { max-width: 420px; font-size: 15px; color: var(--muted); }
+.liner p { margin: 6px 0 0; white-space: pre-wrap; }
+.liner .sig { color: var(--paper); font-style: italic; }
+.linkish { background: none; border: 0; color: var(--brass); padding: 0; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Deck */
+.deck { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+@media (max-width: 820px) { .deck { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+.table {
+  position: relative; width: 100%; max-width: 520px; aspect-ratio: 1.12 / 1; justify-self: center;
+  background: linear-gradient(145deg, var(--plinth-hi), var(--plinth) 60%);
+  border-radius: 22px; border: 1px solid var(--line);
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.platter {
+  position: absolute; left: 6%; top: 8%; width: 76%; aspect-ratio: 1; border-radius: 50%;
+  background: #1a1513; box-shadow: 0 0 0 6px #120e0c, 0 8px 18px rgba(0,0,0,.6);
+}
+.record {
+  position: absolute; inset: 2%; border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 33%, rgba(255,255,255,.03) 33.5%, transparent 34%),
+    repeating-radial-gradient(circle, var(--vinyl) 0 2px, #1b1715 2.5px 3px),
+    var(--vinyl);
+  animation: spin 1.8s linear infinite; animation-play-state: paused;
+}
+.record::after { /* light sheen that stays put while the record turns */
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 30deg, transparent 0 10%, rgba(255,255,255,.07) 14%, transparent 20% 60%, rgba(255,255,255,.05) 64%, transparent 70%);
+}
+.table.playing .record { animation-play-state: running; }
+.table.flip .record { animation-duration: .35s; animation-play-state: running; }
+.label {
+  position: absolute; inset: 31%; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, var(--brass), var(--brass-dim));
+  display: grid; place-items: center; box-shadow: 0 0 0 3px #2a201a;
+}
+.label img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.label .empty { font-family: var(--display); color: #2a1c10; font-size: clamp(11px, 2vw, 15px); text-align: center; line-height: 1.15; padding: 8px; }
+.spindle { position: absolute; left: 50%; top: 50%; width: 4%; aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #eee, #888); z-index: 2; }
+.arm {
+  position: absolute; right: 7%; top: 9%; width: 9%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #cfcfcf, #6f6f6f); z-index: 3;
+  transform-origin: 50% 50%; transform: rotate(-4deg); transition: transform .9s cubic-bezier(.5,.1,.2,1);
+}
+.arm::before { /* the tonearm tube */
+  content: ""; position: absolute; left: 45%; top: 50%; width: 9%; height: 560%;
+  background: linear-gradient(90deg, #9a9a9a, #e3e3e3, #8a8a8a); border-radius: 4px;
+  transform-origin: top center; transform: rotate(14deg);
+}
+.arm::after { /* headshell */
+  content: ""; position: absolute; left: -8%; top: 535%; width: 50%; height: 85%; background: #2b2b2b; border-radius: 3px;
+  transform: rotate(14deg); transform-origin: top right;
+}
+.table.playing .arm { transform: rotate(22deg); }
+.knob-row { position: absolute; right: 6%; bottom: 7%; display: flex; gap: 10px; align-items: center; }
+.led { width: 8px; height: 8px; border-radius: 50%; background: #3a2c24; }
+.table.playing .led { background: var(--live); box-shadow: 0 0 10px var(--live); }
+.rpm { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--muted); }
+
+.info { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.nowplaying .track { font-family: var(--mono); font-size: 13px; color: var(--muted); letter-spacing: .06em; }
+.nowplaying h2 { font-size: clamp(28px, 4.2vw, 44px); line-height: 1.05; margin-top: 6px; overflow-wrap: anywhere; }
+.nowplaying .year { color: var(--brass); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; }
+.mood { display: flex; flex-wrap: wrap; gap: 8px; }
+.mood button {
+  border: 1px solid var(--line); background: transparent; color: var(--muted);
+  border-radius: 8px; padding: 7px 12px; font-size: 13px;
+}
+.mood button[aria-pressed="true"] { color: #22170f; background: var(--paper); border-color: var(--paper); }
+.crate { display: flex; flex-direction: column; gap: 10px; background: #120d0b; border: 1px solid #000; border-radius: 14px; padding: 14px; }
+.np { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.np-t { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.np-time { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.np-bar { height: 6px; border-radius: 3px; background: var(--line); cursor: pointer; overflow: hidden; }
+.np-bar div { height: 100%; width: 0; background: var(--brass); }
+.send { border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.send .row { display: flex; flex-wrap: wrap; gap: 10px; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.vol { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.vol input { accent-color: var(--brass); width: 140px; }
+
+/* Sleeves */
+.section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px; }
+.section-head h2 { font-size: clamp(28px, 4vw, 40px); }
+.side-label { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; margin: 22px 0 12px; display: flex; align-items: center; gap: 12px; }
+.side-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.sleeves { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px; }
+@media (max-width: 420px) { .sleeves { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+.sleeve { background: none; border: 0; padding: 0; text-align: left; color: inherit; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sleeve .art {
+  position: relative; aspect-ratio: 1; width: 100%; border-radius: 4px; overflow: hidden;
+  background: var(--plinth); box-shadow: 0 10px 20px -10px rgba(0,0,0,.8); transition: transform .2s;
+}
+.sleeve .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sleeve:hover .art { transform: translateY(-4px) rotate(-1deg); }
+.sleeve.current .art { outline: 2px solid var(--brass); outline-offset: 3px; }
+.sleeve .no { font-family: var(--mono); font-size: 11px; color: var(--brass); }
+.sleeve .cap { font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.sleeve .yr { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.sleeve.example .art { display: grid; place-items: center; }
+.sleeve.example .art span { font-family: var(--display); font-size: 22px; color: rgba(0,0,0,.45); }
+.empty-note { border: 1px dashed var(--line); border-radius: 14px; padding: 20px; color: var(--muted); margin-top: 16px; }
+.empty-note strong { color: var(--paper); }
+
+/* Intermission */
+.inter {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: center;
+  background: linear-gradient(160deg, var(--plinth-hi), var(--plinth)); border: 1px solid var(--line); border-radius: 22px;
+  padding: clamp(20px, 4vw, 40px);
+}
+@media (max-width: 820px) { .inter { grid-template-columns: minmax(0, 1fr); } }
+.inter p { color: var(--muted); max-width: 46ch; }
+.clock {
+  font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: clamp(56px, 11vw, 104px); line-height: 1;
+  color: var(--paper); background: #120d0b; border-radius: 14px; padding: 22px 18px; text-align: center;
+  border: 1px solid #000; box-shadow: inset 0 2px 12px rgba(0,0,0,.8);
+}
+.clock.running { color: var(--brass); text-shadow: 0 0 18px rgba(214,168,90,.35); }
+.clock small { display: block; font-size: 12px; letter-spacing: .2em; color: var(--muted); margin-top: 8px; text-transform: uppercase; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.presets button { border: 1px solid var(--line); background: transparent; color: var(--paper); border-radius: 8px; padding: 8px 14px; font-family: var(--mono); font-size: 14px; }
+.presets button[aria-pressed="true"] { background: var(--brass); color: #22170f; border-color: var(--brass); }
+
+/* Overlays */
+.overlay {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: rgba(10,7,6,.82); backdrop-filter: blur(6px);
+  padding: max(20px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.card {
+  width: min(560px, 100%); max-height: 100%; overflow: auto; background: var(--plinth); border: 1px solid var(--line);
+  border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px;
+}
+.card .pic { width: 100%; max-height: 52vh; object-fit: contain; border-radius: 10px; background: #000; }
+.card h3 { font-size: 30px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.field input, .field textarea {
+  font: inherit; font-size: 16px; color: var(--paper); background: var(--walnut); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px;
+}
+.field textarea { min-height: 110px; resize: vertical; }
+.card .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+.btn.danger { border-color: #6b2b22; color: #f0b3a5; }
+.btn.danger.armed { background: #6b2b22; color: var(--paper); }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--paper); color: #22170f; padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  z-index: 60; max-width: calc(100% - 32px); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .record { animation: none !important; }
+  .arm, .sleeve .art { transition: none; }
+}
+/* Playlist */
+.playlist { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 32px; align-items: start; }
+@media (max-width: 820px) { .playlist { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
+.playlist .intro p { color: var(--muted); max-width: 40ch; }
+.playlist .intro .controls { margin-top: 16px; }
+.songs { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.song { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.song .n { font-family: var(--mono); font-size: 12px; color: var(--brass); font-variant-numeric: tabular-nums; }
+.song .t { font-weight: 600; overflow-wrap: anywhere; line-height: 1.3; }
+.song .a { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.song .acts { display: flex; gap: 6px; align-items: center; }
+.song .listen { padding: 7px 12px; font-size: 13px; }
+.song .x { background: none; border: 0; color: var(--muted); font-size: 18px; padding: 4px 8px; line-height: 1; border-radius: 6px; }
+.song .x:hover { color: #f0b3a5; }
+.song.example .t, .song.example .a { color: var(--muted); }
+.yt-mark { width: 16px; height: 16px; flex: none; }
+.pl-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pl-bar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+.pl-search { display: flex; align-items: center; gap: 10px; flex: 1 1 200px; max-width: 320px; }
+.pl-search input { flex: 1; min-width: 0; font: inherit; font-size: 15px; color: var(--paper); background: var(--walnut); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; }
+.songs { max-height: 560px; overflow-y: auto; }
+#plMore { align-self: flex-start; }
+footer { color: var(--muted); font-size: 13px; text-align: center; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Side A · Side B · Bonus tracks</div>
+      <h1>Papa's<br><em>Record Room</em></h1>
+    </div>
+    <div class="liner" id="liner">
+      <div class="eyebrow">Liner notes</div>
+      <p id="linerText">For the man who taught us that every day has a soundtrack. Put a record on, look through us for a while, and send your favourite to the group.</p>
+      <p class="sig" id="linerSig">With love, your family</p>
+      <button class="linkish" id="editLiner" hidden>Edit liner notes</button>
+    </div>
+  </header>
+
+  <section class="deck" aria-label="Turntable">
+    <div class="table" id="table">
+      <div class="platter">
+        <div class="record">
+          <div class="label" id="label"><div class="empty">The Family<br>Record</div></div>
+        </div>
+        <div class="spindle"></div>
+      </div>
+      <div class="arm" aria-hidden="true"></div>
+      <div class="knob-row"><span class="rpm">33⅓ RPM</span><span class="led"></span></div>
+    </div>
+
+    <div class="info">
+      <div class="nowplaying">
+        <div class="track" id="trackNo">Today's spin</div>
+        <h2 id="caption">Add the first photo to press this record</h2>
+        <div class="track"><span class="year" id="year"></span> <span id="countLine"></span></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="playBtn" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+          <span id="playText">Drop the needle</span>
+        </button>
+        <button class="btn" id="shuffleBtn" title="Show a random photo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          Surprise me
+        </button>
+        <button class="btn" id="prevBtn" aria-label="Previous photo">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM9.5 12 18 18V6z"/></svg>
+        </button>
+        <button class="btn" id="nextBtn" aria-label="Next photo">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+        </button>
+        <button class="btn" id="deckAdd" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add photos
+        </button>
+      </div>
+
+      <div>
+        <div class="eyebrow" style="margin-bottom:8px">Pick the record</div>
+        <div class="mood" id="moods"></div>
+      </div>
+      <div class="crate" id="crate" hidden>
+        <div class="np"><span class="np-t" id="npTitle"></span><span class="np-time" id="npTime">0:00</span></div>
+        <div class="np-bar" id="npBarWrap" role="slider" aria-label="Song position" tabindex="0"><div id="npBar"></div></div>
+        <div class="controls">
+          <button class="btn" id="recPrev">Previous song</button>
+          <button class="btn" id="recNext">Next song</button>
+        </div>
+      </div>
+      <audio id="recAudio" preload="none"></audio>
+      <label class="vol" for="vol">Volume <input type="range" id="vol" min="0" max="100" value="60"></label>
+
+      <div class="send">
+        <div class="eyebrow">Send this one to the family group</div>
+        <div class="row">
+          <button class="btn" id="copyBtn">Copy photo</button>
+          <button class="btn" id="saveBtn">Save photo</button>
+          <a class="btn wa" id="waLink" href="https://wa.me/" target="_blank" rel="noopener">Open WhatsApp</a>
+        </div>
+        <p class="hint">Copy or save the photo, then open WhatsApp and paste or attach it in the family group. The caption comes along as the message.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="playlist" aria-labelledby="plHead">
+    <div class="intro">
+      <div class="eyebrow">His own records</div>
+      <h2 id="plHead" style="font-size:clamp(28px,4vw,40px)">Papa's Playlist</h2>
+      <p id="plIntro">The songs he loves most. Tap one to play it in YouTube Music.</p>
+      <div class="controls">
+        <a class="btn primary" id="randomSong" href="https://music.youtube.com/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          Play a random favourite
+        </a>
+        <a class="btn" id="wholeList" href="https://music.youtube.com/" target="_blank" rel="noopener" hidden>Open the full playlist</a>
+        <button class="btn" id="addSongs" hidden>Add songs</button>
+        <label class="btn" id="addRecord" hidden>
+          Add a song file
+          <input type="file" id="recInput" accept="audio/*,.m4a,.mp3,.mp4,.webm,.aac" multiple hidden>
+        </label>
+      </div>
+    </div>
+    <div class="pl-side">
+      <div class="pl-bar">
+        <div class="mood" id="plTabs" role="tablist" aria-label="Playlists"></div>
+        <label class="pl-search" for="plSearch"><span class="eyebrow">Find</span><input id="plSearch" type="search" placeholder="Kishore, Queen, safar…"></label>
+      </div>
+      <ol class="songs" id="songs"></ol>
+      <button class="btn" id="plMore" hidden>Show all</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="tracksHead">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">The track list</div>
+        <h2 id="tracksHead">Every photo is a song</h2>
+      </div>
+      <div class="controls">
+        <label class="btn primary" id="addLabel" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add photos
+          <input type="file" id="fileInput" accept="image/*" multiple hidden>
+        </label>
+      </div>
+    </div>
+    <div id="sides"></div>
+    <div class="empty-note" id="emptyNote" hidden></div>
+  </section>
+
+  <section class="inter" aria-labelledby="interHead">
+    <div>
+      <div class="eyebrow">Intermission</div>
+      <h2 id="interHead" style="font-size:clamp(28px,4vw,40px)">Work in sets, Papa. Even the best bands take a break.</h2>
+      <p>Start a work set. When it ends, a record starts playing and a family photo shows up, so you get up, stretch, and maybe send it to the group before the next set.</p>
+      <div class="presets" id="presets">
+        <button data-min="25" aria-pressed="false">25 min</button>
+        <button data-min="50" aria-pressed="true">50 min</button>
+        <button data-min="90" aria-pressed="false">90 min</button>
+      </div>
+      <div class="controls">
+        <button class="btn primary" id="setBtn">Start the set</button>
+        <button class="btn" id="resetBtn">Reset</button>
+      </div>
+    </div>
+    <div class="clock" id="clock">50:00<small id="clockSub">Ready when you are</small></div>
+  </section>
+
+  <footer>Made with love for Papa. The music is played live by this page, so every spin sounds a little different.</footer>
+</div>
+
+<div class="overlay" id="photoModal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+    <img class="pic" id="pmImg" alt="">
+    <h3 id="pmTitle">Sleeve notes</h3>
+    <label class="field" for="pmCaption">What's happening in this photo
+      <input id="pmCaption" maxlength="120" placeholder="Diwali at Nani's house">
+    </label>
+    <label class="field" for="pmYear">Year
+      <input id="pmYear" inputmode="numeric" maxlength="4" placeholder="2014">
+    </label>
+    <div class="row">
+      <button class="btn danger" id="pmDelete">Remove photo</button>
+      <div class="controls">
+        <button class="btn" id="pmCancel">Close</button>
+        <button class="btn primary" id="pmSave">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="linerModal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="lmTitle">
+    <h3 id="lmTitle">Liner notes</h3>
+    <label class="field" for="lmText">A note to Papa
+      <textarea id="lmText" maxlength="600"></textarea>
+    </label>
+    <label class="field" for="lmSig">Signed
+      <input id="lmSig" maxlength="80">
+    </label>
+    <div class="row">
+      <span></span>
+      <div class="controls">
+        <button class="btn" id="lmCancel">Close</button>
+        <button class="btn primary" id="lmSave">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="songModal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="smTitle">
+    <h3 id="smTitle">Add to Papa's Playlist</h3>
+    <label class="field" for="smList">One song per line, as "Song - Singer". You can also paste a YouTube Music link for a song, or put one after the name.
+      <textarea id="smList" placeholder="Lag Jaa Gale - Lata Mangeshkar&#10;Ek Pyaar Ka Nagma Hai - Lata Mangeshkar, Mukesh&#10;Hotel California - Eagles https://music.youtube.com/watch?v=..."></textarea>
+    </label>
+    <label class="field" for="smPlaylist">Link to his whole playlist (optional)
+      <input id="smPlaylist" inputmode="url" placeholder="https://music.youtube.com/playlist?list=...">
+    </label>
+    <div class="row">
+      <span></span>
+      <div class="controls">
+        <button class="btn" id="smCancel">Close</button>
+        <button class="btn primary" id="smSave">Add songs</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="breakModal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="bmTitle">
+    <div class="eyebrow">Intermission</div>
+    <h3 id="bmTitle">Set's over. Time for a break.</h3>
+    <img class="pic" id="bmImg" alt="" hidden>
+    <p class="hint" id="bmCap">Stand up, drink some water, and listen to a song before the next set.</p>
+    <div class="row">
+      <button class="btn" id="bmSend">Send this one</button>
+      <div class="controls">
+        <button class="btn" id="bmAgain">Start next set</button>
+        <button class="btn primary" id="bmClose">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const use = n => (window.claude && window.claude.use) ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+
+  const S = { photos: [], records: [], idx: 0, db: null, assets: null, downloads: null, canEdit: false, liner: null, editing: null };
+  const blobUrl = id => "/_blob/" + id;
+
+  let toastT;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200);
+  }
+
+  /* ---------- Music: played live with Web Audio ---------- */
+  const MOODS = [
+    { key: "raag", name: "Raag Bhupali at dusk", bpm: 64 },
+    { key: "jazz", name: "Sunday morning jazz", bpm: 84 },
+    { key: "rain", name: "Rainy evening lo-fi", bpm: 72 },
+  ];
+  let moodIdx = 0;
+  const REAL = 3; // the mood slot for uploaded song files
+  try { moodIdx = Math.min(REAL, Math.max(0, +localStorage.getItem("prr-mood") || 0)); } catch (e) {}
+  const R = { audio: $("recAudio"), playing: false, i: 0, slide: null };
+  const A ={ ctx: null, master: null, out: null, playing: false, next: 0, step: 0, timer: null, crackle: null };
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+  function ensureAudio() {
+    if (A.ctx) return A.ctx.resume();
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return Promise.reject();
+    A.ctx = new Ctx();
+    A.master = A.ctx.createGain();
+    A.master.gain.value = 0;
+    const comp = A.ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 3;
+    const vol = A.ctx.createGain(); vol.gain.value = $("vol").value / 100;
+    A.out = vol;
+    // soft room reverb from a decaying noise impulse
+    const rev = A.ctx.createConvolver();
+    const len = A.ctx.sampleRate * 2.6, ir = A.ctx.createBuffer(2, len, A.ctx.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+    rev.buffer = ir;
+    const wet = A.ctx.createGain(); wet.gain.value = .28;
+    A.master.connect(comp); A.master.connect(rev); rev.connect(wet); wet.connect(comp);
+    comp.connect(vol); vol.connect(A.ctx.destination);
+    return A.ctx.resume();
+  }
+
+  function voice(freq, t, dur, o = {}) {
+    const c = A.ctx, g = c.createGain(), f = c.createBiquadFilter();
+    f.type = "lowpass"; f.frequency.value = o.cut || 2400; f.Q.value = o.q || .5;
+    const oscs = (o.types || ["sine"]).map((type, i) => {
+      const osc = c.createOscillator(); osc.type = type; osc.frequency.value = freq;
+      osc.detune.value = (o.detune || 0) * (i % 2 ? 1 : -1);
+      if (o.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 5.2; lg.gain.value = o.vib; l.connect(lg); lg.connect(osc.frequency); l.start(t); l.stop(t + dur + 1.5); }
+      osc.connect(f); osc.start(t); osc.stop(t + dur + (o.rel || .8) + .1); return osc;
+    });
+    if (o.sweep) { f.frequency.setValueAtTime(o.sweep, t); f.frequency.exponentialRampToValueAtTime(o.cut || 900, t + Math.min(dur, 1.2)); }
+    const peak = (o.gain || .12) / oscs.length;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + (o.att || .02));
+    if (o.pluck) g.gain.exponentialRampToValueAtTime(peak * .02, t + dur);
+    else { g.gain.setValueAtTime(peak, t + dur); }
+    g.gain.linearRampToValueAtTime(0, t + dur + (o.rel || .8));
+    f.connect(g); g.connect(A.master);
+  }
+
+  function startCrackle(amount) {
+    const c = A.ctx, len = c.sampleRate * 4, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) { d[i] = (Math.random() * 2 - 1) * .012; if (Math.random() < .00035) d[i] = (Math.random() * 2 - 1) * .5; }
+    const src = c.createBufferSource(); src.buffer = b; src.loop = true;
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 900;
+    const g = c.createGain(); g.gain.value = amount;
+    src.connect(hp); hp.connect(g); g.connect(A.master); src.start();
+    A.crackle = src;
+  }
+
+  // Bhupali: Sa Re Ga Pa Dha, here in C (C D E G A)
+  const BHUP = [48, 50, 52, 55, 57, 60, 62, 64, 67, 69, 72];
+  let mel = 5;
+  const JAZZ = [[48, [64, 67, 71, 74]], [45, [64, 67, 72, 76]], [50, [65, 69, 72, 76]], [43, [65, 69, 71, 74]]]; // Cmaj9 Am7 Dm9 G13ish
+  const RAIN = [[41, [64, 69, 72, 76]], [40, [62, 67, 71, 74]], [38, [60, 65, 69, 72]], [36, [59, 64, 67, 71]]];
+
+  function schedule(t, step) {
+    const m = MOODS[moodIdx], beat = 60 / m.bpm;
+    if (m.key === "raag") {
+      // tanpura cycle: Pa(low) Sa Sa Sa(low), each string ringing long
+      const tan = [43, 48, 48, 36][step % 4];
+      voice(hz(tan), t, beat * 3.6, { types: ["sawtooth", "triangle"], cut: 1300, sweep: 3200, gain: .07, pluck: true, rel: 1.2, detune: 4 });
+      if (step % 2 === 0 && Math.random() < .8) {
+        mel = Math.max(0, Math.min(BHUP.length - 1, mel + [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)]));
+        const len = beat * (Math.random() < .3 ? 3 : 1.6);
+        voice(hz(BHUP[mel] + 12), t + (Math.random() < .3 ? beat / 2 : 0), len, { types: ["sine", "triangle"], gain: .085, att: .06, vib: 2.5, rel: 1, cut: 3000 });
+      }
+    } else {
+      const prog = m.key === "jazz" ? JAZZ : RAIN, bar = Math.floor(step / 4) % prog.length, b4 = step % 4;
+      const [bass, chord] = prog[bar];
+      const rhodes = { types: ["sine", "triangle"], detune: 6, gain: m.key === "rain" ? .09 : .11, cut: m.key === "rain" ? 1100 : 2600, att: .01, pluck: true, rel: 1.4 };
+      if (b4 === 0) chord.forEach((n, i) => voice(hz(n), t + i * .018, beat * 3.6, rhodes));
+      if (m.key === "jazz" && b4 === 2 && Math.random() < .6) chord.slice(1).forEach(n => voice(hz(n), t + beat * .5, beat, rhodes));
+      // bass: walking for jazz, root-and-fifth for rain
+      const walk = m.key === "jazz" ? [0, 7, 9, 11][b4] : [0, 0, 7, 0][b4];
+      if (m.key === "jazz" || b4 !== 1) voice(hz(bass - 12 + walk), t, beat * .9, { types: ["sine"], gain: .16, cut: 500, pluck: true, rel: .2 });
+      // brushes / soft kick
+      if (m.key === "rain" && (b4 === 0 || b4 === 2)) voice(55, t, .25, { types: ["sine"], gain: .18, cut: 200, pluck: true, rel: .1 });
+      if (Math.random() < .45 && b4 % 2 === 1) {
+        const top = chord[Math.floor(Math.random() * chord.length)] + 12;
+        voice(hz(top), t + beat * (Math.random() < .5 ? 0 : .5), beat * 1.2, { types: ["sine"], gain: .05, vib: 1.5, rel: .9 });
+      }
+    }
+  }
+
+  function tick() {
+    const beat = 60 / MOODS[moodIdx].bpm;
+    while (A.next < A.ctx.currentTime + .25) { schedule(A.next, A.step++); A.next += beat; }
+  }
+
+  async function play() {
+    if (moodIdx === REAL) {
+      if (S.records.length) return playReal(R.i);
+      moodIdx = 0; renderMoods();
+    }
+    try { await ensureAudio(); } catch (e) { toast("This browser can't play the music."); return; }
+    if (A.playing) return;
+    A.playing = true; A.step = 0; A.next = A.ctx.currentTime + .9; // let the needle land first
+    A.master.gain.cancelScheduledValues(A.ctx.currentTime);
+    A.master.gain.setTargetAtTime(1, A.ctx.currentTime + .5, .4);
+    startCrackle(MOODS[moodIdx].key === "rain" ? 1.2 : .7);
+    A.timer = setInterval(tick, 80);
+    renderPlay();
+  }
+  function stop() {
+    if (R.playing) { R.audio.pause(); R.playing = false; clearInterval(R.slide); renderPlay(); return; }
+    if (!A.playing) return;
+    A.playing = false; clearInterval(A.timer);
+    A.master.gain.setTargetAtTime(0, A.ctx.currentTime, .25);
+    const cr = A.crackle; setTimeout(() => { try { cr && cr.stop(); } catch (e) {} }, 1200);
+    renderPlay();
+  }
+  function renderPlay() {
+    const on = A.playing || R.playing;
+    $("table").classList.toggle("playing", on);
+    $("playBtn").setAttribute("aria-pressed", on);
+    $("playText").textContent = on ? "Lift the needle" : "Drop the needle";
+    $("playIcon").innerHTML = on ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+  }
+  $("playBtn").onclick = () => (A.playing || R.playing) ? stop() : play();
+
+  /* ---------- His real records: uploaded song files ---------- */
+  const mmss = s => isFinite(s) ? Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0") : "0:00";
+  function playReal(i) {
+    const n = S.records.length; if (!n) return;
+    if (A.playing) { A.playing = false; clearInterval(A.timer); A.master.gain.setTargetAtTime(0, A.ctx.currentTime, .25); try { A.crackle && A.crackle.stop(); } catch (e) {} }
+    R.i = (i + n) % n;
+    const r = S.records[R.i];
+    if (moodIdx !== REAL) { moodIdx = REAL; renderMoods(); }
+    R.audio.src = blobUrl(r.asset);
+    R.audio.play().catch(() => { R.playing = false; renderPlay(); toast("This song couldn't play here. Try another file format."); });
+    R.playing = true; renderPlay(); renderCrate();
+    clearInterval(R.slide);
+    if (S.photos.length > 1) R.slide = setInterval(() => show(S.idx + 1), 14000);
+  }
+  function renderCrate() {
+    const show_ = moodIdx === REAL && S.records.length > 0;
+    $("crate").hidden = !show_;
+    if (!show_) return;
+    const r = S.records[R.i] || S.records[0];
+    $("npTitle").textContent = r.title + (r.artist ? " · " + r.artist : "");
+    const d = R.audio.duration, t = R.audio.currentTime || 0;
+    $("npTime").textContent = mmss(t) + " / " + mmss(d);
+    $("npBar").style.width = (d ? Math.min(100, t / d * 100) : 0) + "%";
+  }
+  R.audio.addEventListener("timeupdate", renderCrate);
+  R.audio.addEventListener("loadedmetadata", renderCrate);
+  R.audio.addEventListener("ended", () => playReal(R.i + 1));
+  $("recPrev").onclick = () => playReal(R.audio.currentTime > 4 ? R.i : R.i - 1);
+  $("recNext").onclick = () => playReal(R.i + 1);
+  $("npBarWrap").addEventListener("click", e => {
+    const b = e.currentTarget.getBoundingClientRect();
+    if (R.audio.duration) R.audio.currentTime = (e.clientX - b.left) / b.width * R.audio.duration;
+  });
+  $("npBarWrap").addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") R.audio.currentTime += 10;
+    if (e.key === "ArrowLeft") R.audio.currentTime -= 10;
+  });
+  $("vol").addEventListener("input", e => { R.audio.volume = e.target.value / 100; });
+  R.audio.volume = $("vol").value / 100;
+
+  // The store takes video files, not audio-only ones, so a song is re-recorded in the browser
+  // as a tiny still-frame video with its sound, in real time.
+  async function transcode(file, onProgress) {
+    if (!window.MediaRecorder) throw "no_recorder";
+    const mime = ["video/mp4;codecs=avc1,mp4a.40.2", "video/webm;codecs=vp8,opus", "video/mp4", "video/webm"].find(m => MediaRecorder.isTypeSupported(m));
+    if (!mime) throw "no_recorder";
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const dest = ctx.createMediaStreamDestination(); src.connect(dest);
+    const cv = document.createElement("canvas"); cv.width = cv.height = 64;
+    const g = cv.getContext("2d"); g.fillStyle = "#d6a85a"; g.fillRect(0, 0, 64, 64);
+    const vt = cv.captureStream(1).getVideoTracks();
+    const rec = new MediaRecorder(new MediaStream([...vt, ...dest.stream.getAudioTracks()]), { mimeType: mime, audioBitsPerSecond: 160000, videoBitsPerSecond: 20000 });
+    const nudge = setInterval(() => g.fillRect(0, 0, 64, 64), 1000); // keep frames flowing
+    const chunks = [];
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    const done = new Promise(res => rec.onstop = res);
+    rec.start(1000); const t0 = ctx.currentTime; src.start();
+    const iv = setInterval(() => onProgress(Math.max(0, buf.duration - (ctx.currentTime - t0))), 1000);
+    src.onended = () => rec.stop();
+    await done; clearInterval(iv); clearInterval(nudge); vt.forEach(t => t.stop()); ctx.close();
+    return new Blob(chunks, { type: mime.split(";")[0] });
+  }
+
+  $("recInput").onchange = async e => {
+    const files = [...e.target.files]; e.target.value = "";
+    if (!files.length || !S.assets || !S.db) return;
+    let done = 0, failed = 0;
+    for (const f of files) {
+      try {
+        let blob = f, type;
+        if (f.type === "video/mp4" || f.type === "video/webm") type = f.type; // already a video: upload as is
+        else {
+          toast("Pressing " + f.name + " onto vinyl… keep this page open");
+          blob = await transcode(f, left => toast("Pressing " + f.name + " · " + mmss(left) + " left. Keep this page open."));
+          type = blob.type;
+        }
+        if (blob.size > 20 * 1024 * 1024) throw "too_large";
+        toast("Uploading " + f.name + "…");
+        const up = await S.assets.upload(blob, { type });
+        const base = f.name.replace(/\.[^.]+$/, "").replace(/^\d+[\s._-]+/, "");
+        const [a, ...t] = base.split(/\s+-\s+/);
+        await S.db.collection("records").add({ asset: up.id, title: (t.length ? t.join(" - ") : a).slice(0, 140), artist: (t.length ? a : "").slice(0, 140), addedAt: Date.now() });
+        done++;
+      } catch (err) {
+        failed++;
+        const code = err && (err.code || err);
+        toast(code === "too_large" ? f.name + " is over 20 MB. Try a smaller file."
+          : code === "unsupported_type" ? f.name + " couldn't be stored in this format. Send it to Claude to convert."
+          : f.name + " couldn't be added.");
+        await new Promise(r => setTimeout(r, 2500));
+      }
+    }
+    if (done) toast(done + (done === 1 ? " song is" : " songs are") + " on the turntable now. Pick “His real records”.");
+  };
+  $("vol").oninput = e => { if (A.out) A.out.gain.value = e.target.value / 100; };
+
+  function renderMoods() {
+    $("moods").innerHTML = "";
+    const list = S.records.length ? [...MOODS, { name: "His real records · " + S.records.length }] : MOODS;
+    list.forEach((m, i) => {
+      const b = document.createElement("button");
+      b.textContent = m.name; b.setAttribute("aria-pressed", i === moodIdx);
+      b.onclick = () => {
+        moodIdx = i; try { localStorage.setItem("prr-mood", i); } catch (e) {}
+        renderMoods(); renderCrate();
+        if (A.playing || R.playing) { stop(); setTimeout(play, 400); }
+      };
+      $("moods").appendChild(b);
+    });
+  }
+  renderMoods();
+
+  /* ---------- Photos ---------- */
+  const SLEEVE_COLORS = ["#b5553c", "#3c6e8f", "#d6a85a", "#6e8f5a", "#8f3c6e", "#c98a3b"];
+  const EXAMPLES = ["First day of school", "Diwali at Nani's", "The Goa trip", "Papa's 50th"];
+
+  function current() { return S.photos[S.idx]; }
+
+  function todayIndex(n) {
+    const d = new Date(), seed = d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate();
+    return n ? (seed * 2654435761 >>> 0) % n : 0;
+  }
+
+  function show(i, animate = true) {
+    if (!S.photos.length) return renderDeck();
+    S.idx = (i + S.photos.length) % S.photos.length;
+    if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const t = $("table"); t.classList.add("flip"); setTimeout(() => t.classList.remove("flip"), 450);
+    }
+    renderDeck(); renderSleeves();
+  }
+
+  function waText(p) {
+    const bits = [p.caption, p.year && "(" + p.year + ")"].filter(Boolean).join(" ");
+    return "From Papa's Record Room: " + (bits || "a family favourite");
+  }
+
+  function renderDeck() {
+    const p = current(), n = S.photos.length;
+    const label = $("label");
+    if (!p) {
+      label.innerHTML = '<div class="empty">The Family<br>Record</div>';
+      $("trackNo").textContent = "Waiting for the first track";
+      $("caption").textContent = S.db ? "Add the first photo to press this record" : "Open this page signed in to see the family photos";
+      $("year").textContent = ""; $("countLine").textContent = "";
+      ["copyBtn", "saveBtn", "shuffleBtn", "prevBtn", "nextBtn"].forEach(id => $(id).disabled = true);
+      $("waLink").href = "https://wa.me/";
+      return;
+    }
+    ["copyBtn", "saveBtn", "shuffleBtn", "prevBtn", "nextBtn"].forEach(id => $(id).disabled = false);
+    $("saveBtn").disabled = !S.downloads;
+    label.innerHTML = "";
+    const img = new Image(); img.src = blobUrl(p.asset); img.alt = p.caption || "Family photo";
+    label.appendChild(img);
+    const side = S.idx < Math.ceil(n / 2) ? "A" : "B";
+    $("trackNo").textContent = (S.idx === todayIndex(n) ? "Today's spin · " : "") + "Side " + side + " · Track " + String(S.idx + 1).padStart(2, "0");
+    $("caption").textContent = p.caption || "Untitled family moment";
+    $("year").textContent = p.year || "";
+    $("countLine").textContent = "· " + n + (n === 1 ? " track" : " tracks") + " on this record";
+    $("waLink").href = "https://wa.me/?text=" + encodeURIComponent(waText(p));
+  }
+
+  function renderSleeves() {
+    const sides = $("sides"); sides.innerHTML = "";
+    const n = S.photos.length;
+    $("emptyNote").hidden = n > 0;
+    if (!n) {
+      $("emptyNote").innerHTML = S.db
+        ? (S.assets ? "<strong>This record has no tracks yet.</strong> Tap <strong>Add photos</strong> to upload family pictures. Each one becomes a track: give it a caption and a year, and Papa can spin through them." : "<strong>No photos yet.</strong> Only people with edit access can add photos. The owner can give edit access from the Share menu.")
+        : "<strong>Photos load when you open this page signed in to Claude.</strong> The music and the work timer work either way.";
+      const lab = document.createElement("div"); lab.className = "side-label"; lab.textContent = "Examples of how tracks will look";
+      const grid = document.createElement("div"); grid.className = "sleeves";
+      EXAMPLES.forEach((c, i) => {
+        const el = document.createElement("div"); el.className = "sleeve example";
+        el.innerHTML = '<div class="art" style="background:' + SLEEVE_COLORS[i] + '"><span>' + String(i + 1).padStart(2, "0") + '</span></div><span class="no">EXAMPLE</span><span class="cap"></span>';
+        el.querySelector(".cap").textContent = c;
+        grid.appendChild(el);
+      });
+      sides.append(lab, grid);
+      return;
+    }
+    const half = Math.ceil(n / 2);
+    [["Side A", 0, half], ["Side B", half, n]].forEach(([name, a, b]) => {
+      if (a >= b) return;
+      const lab = document.createElement("div"); lab.className = "side-label";
+      const y0 = S.photos[a].year, y1 = S.photos[b - 1].year;
+      lab.textContent = name + (y0 && y1 ? " · " + (y0 === y1 ? y0 : y0 + "–" + y1) : "");
+      const grid = document.createElement("div"); grid.className = "sleeves";
+      for (let i = a; i < b; i++) {
+        const p = S.photos[i];
+        const el = document.createElement("button");
+        el.className = "sleeve" + (i === S.idx ? " current" : "");
+        el.innerHTML = '<div class="art"><img loading="lazy" alt=""></div><span class="no"></span><span class="cap"></span><span class="yr"></span>';
+        el.querySelector("img").src = blobUrl(p.asset);
+        el.querySelector("img").alt = p.caption || "Family photo";
+        el.querySelector(".no").textContent = String(i + 1).padStart(2, "0");
+        el.querySelector(".cap").textContent = p.caption || "Untitled";
+        el.querySelector(".yr").textContent = p.year || "";
+        el.onclick = () => {
+          if (S.canEdit && i === S.idx) return openPhoto(p);
+          show(i); window.scrollTo({ top: 0, behavior: "smooth" });
+        };
+        if (S.canEdit) el.title = "Tap to play. Tap again to edit the caption.";
+        grid.appendChild(el);
+      }
+      sides.append(lab, grid);
+    });
+  }
+
+  $("shuffleBtn").onclick = () => {
+    const n = S.photos.length; if (n < 2) return show(0);
+    let j; do { j = Math.floor(Math.random() * n); } while (j === S.idx);
+    show(j);
+  };
+  $("prevBtn").onclick = () => show(S.idx - 1);
+  $("nextBtn").onclick = () => show(S.idx + 1);
+
+  /* ---------- Sending ---------- */
+  function pngBlob(p) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img, 0, 0);
+        c.toBlob(b => b ? res(b) : rej(), "image/png");
+      };
+      img.onerror = rej; img.src = blobUrl(p.asset);
+    });
+  }
+  async function copyPhoto(p) {
+    if (!p) return;
+    try {
+      if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) throw 0;
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob(p) })]);
+      toast("Photo copied. Open WhatsApp and paste it in the group.");
+    } catch (e) {
+      toast(S.downloads ? "Copying isn't allowed here. Use Save photo instead." : "Copying isn't allowed here. Long-press the photo on the record to save it.");
+    }
+  }
+  async function savePhoto(p) {
+    if (!p || !S.downloads) return;
+    try {
+      const blob = await fetch(blobUrl(p.asset)).then(r => r.blob());
+      const name = (p.caption || "family-photo").replace(/[^\w\- ]+/g, "").trim().slice(0, 60) || "family-photo";
+      await S.downloads.save({ filename: name + (p.year ? " " + p.year : "") + ".jpg", data: blob });
+      toast("Saved. Now attach it in the WhatsApp group.");
+    } catch (e) {
+      if (e && e.code === "declined") return;
+      toast("The photo couldn't be saved here.");
+    }
+  }
+  $("copyBtn").onclick = () => copyPhoto(current());
+  $("saveBtn").onclick = () => savePhoto(current());
+
+  /* ---------- Uploading ---------- */
+  function shrink(file) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file), img = new Image();
+      img.onload = () => {
+        const max = 1800, s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(b => b ? res(b) : rej(), "image/jpeg", .86);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(); };
+      img.src = url;
+    });
+  }
+  $("fileInput").onchange = async e => {
+    const files = [...e.target.files]; e.target.value = "";
+    if (!files.length || !S.assets || !S.db) return;
+    let done = 0, failed = 0;
+    for (const f of files) {
+      toast("Pressing track " + (done + failed + 1) + " of " + files.length + "…");
+      try {
+        const blob = await shrink(f);
+        const up = await S.assets.upload(blob, { type: "image/jpeg" });
+        const caption = f.name.replace(/\.[^.]+$/, "").replace(/^(IMG|DSC|PXL|WA)[-_]?\d.*$/i, "").replace(/[_-]+/g, " ").trim();
+        await S.db.collection("photos").add({ asset: up.id, caption: caption.slice(0, 120), year: String(new Date(f.lastModified || Date.now()).getFullYear()), addedAt: Date.now() });
+        done++;
+      } catch (err) { failed++; }
+    }
+    toast(done + (done === 1 ? " photo" : " photos") + " added" + (failed ? ", " + failed + " couldn't be added" : "") + ". Tap a sleeve twice to edit its caption.");
+  };
+
+  /* ---------- Editing a photo ---------- */
+  function openPhoto(p) {
+    S.editing = p;
+    $("pmImg").src = blobUrl(p.asset); $("pmImg").alt = p.caption || "";
+    $("pmCaption").value = p.caption || ""; $("pmYear").value = p.year || "";
+    const d = $("pmDelete"); d.classList.remove("armed"); d.textContent = "Remove photo";
+    $("photoModal").hidden = false; $("pmCaption").focus();
+  }
+  $("pmCancel").onclick = () => $("photoModal").hidden = true;
+  $("pmSave").onclick = async () => {
+    const p = S.editing; if (!p) return;
+    try {
+      await S.db.doc("photos/" + p.id).update({ caption: $("pmCaption").value.trim().slice(0, 120), year: $("pmYear").value.replace(/\D/g, "").slice(0, 4) });
+      $("photoModal").hidden = true; toast("Saved");
+    } catch (e) { toast("Couldn't save. You may only have view access."); }
+  };
+  $("pmDelete").onclick = async () => {
+    const d = $("pmDelete"), p = S.editing;
+    if (!d.classList.contains("armed")) { d.classList.add("armed"); d.textContent = "Tap again to remove"; return; }
+    try {
+      await S.db.doc("photos/" + p.id).delete();
+      if (S.assets) S.assets.delete(p.asset).catch(() => {});
+      $("photoModal").hidden = true; toast("Photo removed");
+    } catch (e) { toast("Couldn't remove it. You may only have view access."); }
+  };
+
+  /* ---------- Liner notes ---------- */
+  function renderLiner() {
+    if (!S.liner) return;
+    if (S.liner.note) $("linerText").textContent = S.liner.note;
+    if (S.liner.sig) $("linerSig").textContent = S.liner.sig;
+  }
+  $("editLiner").onclick = () => {
+    $("lmText").value = $("linerText").textContent; $("lmSig").value = $("linerSig").textContent;
+    $("linerModal").hidden = false; $("lmText").focus();
+  };
+  $("lmCancel").onclick = () => $("linerModal").hidden = true;
+  $("lmSave").onclick = async () => {
+    try {
+      await S.db.doc("meta/liner").set({ note: $("lmText").value.trim().slice(0, 600), sig: $("lmSig").value.trim().slice(0, 80) });
+      $("linerModal").hidden = true; toast("Liner notes saved");
+    } catch (e) { toast("Couldn't save the liner notes."); }
+  };
+
+  /* ---------- Papa's Playlist ---------- */
+  S.songs = []; S.playlistUrl = "";
+  const SONG_EXAMPLES = [["Lag Jaa Gale", "Lata Mangeshkar"], ["Ek Pyaar Ka Nagma Hai", "Lata Mangeshkar, Mukesh"], ["Yesterday", "The Beatles"]];
+  // Only plain https links are kept, so a stored row can never become a script link.
+  function safeUrl(u) {
+    try { const x = new URL(String(u || "").trim()); return x.protocol === "https:" ? x.href : ""; } catch (e) { return ""; }
+  }
+  const searchUrl = s => "https://music.youtube.com/search?q=" + encodeURIComponent([s.title, s.artist].filter(Boolean).join(" "));
+  const songUrl = s => safeUrl(s.url) || searchUrl(s);
+
+  // Playlists arrive as "pack" documents holding [title, artist, videoId] rows; family additions are single docs.
+  S.packs = []; S.plTab = null; S.plAll = false;
+  try { S.plTab = localStorage.getItem("prr-pltab"); } catch (e) {}
+  const fromPack = (p, [title, artist, v]) => ({ title, artist, url: /^[\w-]{11}$/.test(v || "") ? "https://music.youtube.com/watch?v=" + v : "" });
+  function tabs() {
+    const t = [];
+    if (S.records.length) t.push({ key: "real", name: "Plays on the turntable", songs: S.records.map((r, i) => ({ ...r, coll: "records", rec: i })) });
+    t.push(...S.packs.map(p => ({ key: "pack:" + p.id, name: p.pack || p.name || "Playlist", songs: (p.list || []).map(r => fromPack(p, r)), playlist: p.playlist })));
+    if (S.songs.length) t.push({ key: "family", name: "Added by family", songs: S.songs, playlist: S.playlistUrl });
+    return t;
+  }
+  function allSongs() { return tabs().filter(t => t.key !== "real").flatMap(t => t.songs); }
+
+  function pickRandomSong() {
+    const a = $("randomSong"), all = allSongs();
+    if (!all.length) { a.href = safeUrl(S.playlistUrl) || "https://music.youtube.com/"; return; }
+    const s = all[Math.floor(Math.random() * all.length)];
+    a.href = songUrl(s); a.title = s.title + (s.artist ? " · " + s.artist : "");
+  }
+  $("randomSong").addEventListener("click", () => { stop(); setTimeout(pickRandomSong, 300); });
+
+  function renderSongs() {
+    const ol = $("songs"); ol.innerHTML = "";
+    $("addSongs").hidden = !(S.db && S.canEdit);
+    const T = tabs();
+    let tab = T.find(t => t.key === S.plTab) || T[0];
+    $("plTabs").innerHTML = "";
+    if (T.length > 1) T.forEach(t => {
+      const b = document.createElement("button"); b.setAttribute("role", "tab");
+      b.textContent = t.name + " · " + t.songs.length; b.setAttribute("aria-pressed", t === tab);
+      b.onclick = () => { S.plTab = t.key; S.plAll = false; try { localStorage.setItem("prr-pltab", t.key); } catch (e) {} renderSongs(); };
+      $("plTabs").appendChild(b);
+    });
+    const wl = safeUrl(tab ? tab.playlist : S.playlistUrl);
+    $("wholeList").hidden = !wl; if (wl) $("wholeList").href = wl;
+    const total = T.reduce((n, t) => n + t.songs.length, 0);
+    const q = $("plSearch").value.trim().toLowerCase();
+    let list = tab ? tab.songs.map((s, i) => ({ ...s, no: i + 1 })) : null;
+    if (list && q) list = list.filter(s => (s.title + " " + (s.artist || "")).toLowerCase().includes(q));
+    const LIMIT = 40, cut = list && !q && !S.plAll && list.length > LIMIT;
+    $("plMore").hidden = !cut; if (cut) $("plMore").textContent = "Show all " + list.length;
+    if (cut) list = list.slice(0, LIMIT);
+    $("plIntro").textContent = tab
+      ? total + " songs he loves, across " + T.length + (T.length === 1 ? " playlist" : " playlists") + ". Tap one to play it in YouTube Music. The turntable music pauses on its own."
+      : (S.canEdit ? "His playlist goes here. Tap Add songs and paste the list one song per line. Until then, these examples show how it will look." : "The family is still collecting his favourite songs. These are examples of how they'll look.");
+    if (list && !list.length) { const li = document.createElement("li"); li.className = "song example"; li.innerHTML = '<span class="n"></span><div class="t">No songs match that.</div>'; ol.appendChild(li); }
+    (list || SONG_EXAMPLES.map(([title, artist]) => ({ title, artist, example: true }))).forEach((s, i) => {
+      const li = document.createElement("li"); li.className = "song" + (s.example ? " example" : "");
+      li.innerHTML = '<span class="n"></span><div><div class="t"></div><div class="a"></div></div><div class="acts"></div>';
+      li.querySelector(".n").textContent = s.example ? "EX" : String(s.no || i + 1).padStart(2, "0");
+      li.querySelector(".t").textContent = s.title;
+      li.querySelector(".a").textContent = s.artist || "";
+      const acts = li.querySelector(".acts");
+      if (s.rec !== undefined) {
+        const b = document.createElement("button");
+        b.className = "btn primary listen"; b.textContent = "Play here";
+        b.setAttribute("aria-label", "Play " + s.title + " on the turntable");
+        b.onclick = () => { playReal(s.rec); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        acts.appendChild(b);
+      } else if (!s.example) {
+        const a = document.createElement("a");
+        a.className = "btn listen"; a.target = "_blank"; a.rel = "noopener"; a.href = songUrl(s);
+        a.innerHTML = '<svg class="yt-mark" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play';
+        a.setAttribute("aria-label", "Play " + s.title + " in YouTube Music");
+        a.addEventListener("click", () => stop());
+        acts.appendChild(a);
+      }
+      if (!s.example) {
+        if (S.canEdit && s.id) {
+          const x = document.createElement("button"); x.className = "x"; x.textContent = "×";
+          x.setAttribute("aria-label", "Remove " + s.title);
+          x.onclick = async () => {
+            if (!x.dataset.armed) { x.dataset.armed = "1"; x.textContent = "Remove?"; x.style.fontSize = "13px"; return; }
+            try {
+              await S.db.doc((s.coll || "songs") + "/" + s.id).delete();
+              if (s.asset && S.assets) S.assets.delete(s.asset).catch(() => {});
+              toast("Removed " + s.title);
+            } catch (e) { toast("Couldn't remove it."); }
+          };
+          acts.appendChild(x);
+        }
+      }
+      ol.appendChild(li);
+    });
+    pickRandomSong();
+  }
+
+  function parseSongs(text) {
+    return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+      const m = line.match(/https:\/\/\S+/);
+      const url = m ? safeUrl(m[0]) : "";
+      let rest = line.replace(/https?:\/\/\S+/g, "").replace(/^\s*\d+[.)]\s*/, "").trim();
+      const [title, ...artist] = rest.split(/\s+[-–—|]\s+|\s+by\s+/i);
+      return { title: (title || "").trim().slice(0, 140) || (url ? "Song link" : ""), artist: artist.join(", ").trim().slice(0, 140), url };
+    }).filter(s => s.title);
+  }
+
+  $("plSearch").addEventListener("input", () => renderSongs());
+  $("plMore").onclick = () => { S.plAll = true; renderSongs(); };
+
+  $("addSongs").onclick = () => {
+    $("smList").value = ""; $("smPlaylist").value = S.playlistUrl || "";
+    $("songModal").hidden = false; $("smList").focus();
+  };
+  $("smCancel").onclick = () => $("songModal").hidden = true;
+  $("smSave").onclick = async () => {
+    const songs = parseSongs($("smList").value), pl = $("smPlaylist").value.trim();
+    if (pl && !safeUrl(pl)) { toast("The playlist link should start with https://"); return; }
+    try {
+      if (pl !== (S.playlistUrl || "")) await S.db.doc("meta/playlist").set({ url: safeUrl(pl) });
+      const base = Date.now();
+      for (let i = 0; i < songs.length; i++) await S.db.collection("songs").add({ ...songs[i], addedAt: base + i });
+      $("songModal").hidden = true;
+      toast(songs.length ? songs.length + (songs.length === 1 ? " song added" : " songs added") : "Playlist link saved");
+    } catch (e) { toast("Couldn't save the songs. You may only have view access."); }
+  };
+  renderSongs();
+
+  document.querySelectorAll(".overlay").forEach(o => o.addEventListener("click", e => { if (e.target === o) o.hidden = true; }));
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") document.querySelectorAll(".overlay").forEach(o => o.hidden = true);
+    if (e.target.matches("input, textarea")) return;
+    if (e.key === "ArrowRight") show(S.idx + 1);
+    if (e.key === "ArrowLeft") show(S.idx - 1);
+  });
+
+  /* ---------- Intermission timer ---------- */
+  const T = { mins: 50, end: 0, iv: null, wake: null };
+  try { T.mins = +localStorage.getItem("prr-mins") || 50; } catch (e) {}
+  const fmt = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+  function renderPresets() {
+    document.querySelectorAll("#presets button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.min === T.mins));
+  }
+  function renderClock() {
+    const running = !!T.iv, left = running ? Math.max(0, (T.end - Date.now()) / 1000) : T.mins * 60;
+    $("clock").firstChild.nodeValue = fmt(Math.ceil(left));
+    $("clock").classList.toggle("running", running);
+    $("clockSub").textContent = running ? "Working · break at " + new Date(T.end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "Ready when you are";
+    $("setBtn").textContent = running ? "End the set early" : "Start the set";
+  }
+  document.querySelectorAll("#presets button").forEach(b => b.onclick = () => {
+    if (T.iv) return;
+    T.mins = +b.dataset.min; try { localStorage.setItem("prr-mins", T.mins); } catch (e) {}
+    renderPresets(); renderClock();
+  });
+  async function startSet() {
+    ensureAudio().catch(() => {}); // unlock audio now, while we have the click
+    if (A.playing) stop();
+    T.end = Date.now() + T.mins * 60000;
+    T.iv = setInterval(() => { if (Date.now() >= T.end) endSet(); else renderClock(); }, 500);
+    try { T.wake = await navigator.wakeLock.request("screen"); } catch (e) {}
+    renderClock();
+  }
+  function clearSet() {
+    clearInterval(T.iv); T.iv = null;
+    try { T.wake && T.wake.release(); } catch (e) {} T.wake = null;
+    renderClock();
+  }
+  function chime() {
+    if (!A.ctx) return;
+    const t = A.ctx.currentTime + .05;
+    [72, 76, 79, 84].forEach((n, i) => voice(hz(n), t + i * .22, 1.2, { types: ["sine", "triangle"], gain: .12, pluck: true, rel: 1.5 }));
+  }
+  function endSet() {
+    clearSet();
+    if (A.ctx) { A.master.gain.cancelScheduledValues(A.ctx.currentTime); A.master.gain.setValueAtTime(1, A.ctx.currentTime); }
+    chime();
+    setTimeout(play, 1800);
+    const n = S.photos.length;
+    if (n) {
+      show(Math.floor(Math.random() * n), false);
+      const p = current();
+      $("bmImg").src = blobUrl(p.asset); $("bmImg").alt = p.caption || ""; $("bmImg").hidden = false;
+      $("bmCap").textContent = (p.caption || "A family favourite") + (p.year ? ", " + p.year : "") + ". Stand up, stretch, and send this one to the group if it makes you smile.";
+      $("bmSend").hidden = false;
+    } else { $("bmImg").hidden = true; $("bmSend").hidden = true; }
+    $("breakModal").hidden = false;
+    document.title = "Break time · Papa's Record Room";
+  }
+  $("setBtn").onclick = () => T.iv ? clearSet() : startSet();
+  $("resetBtn").onclick = () => { clearSet(); };
+  $("bmClose").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; };
+  $("bmAgain").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; startSet(); };
+  $("bmSend").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; window.scrollTo({ top: 0, behavior: "smooth" }); toast("Copy or save it, then open WhatsApp."); };
+  renderPresets(); renderClock();
+
+  /* ---------- Boot ---------- */
+  renderDeck(); renderSleeves();
+
+  (async () => {
+    const [db, assets, downloads, user] = await Promise.all([use("db"), use("assets"), use("downloads"), use("user")]);
+    S.db = db; S.assets = assets; S.downloads = downloads;
+    S.canEdit = !!(user && user.canEdit && user.canEdit());
+    $("addLabel").hidden = !assets;
+    $("deckAdd").hidden = !assets;
+    $("addRecord").hidden = !assets;
+    $("deckAdd").onclick = () => $("fileInput").click();
+    $("editLiner").hidden = !(db && S.canEdit);
+    renderDeck(); renderSleeves(); renderSongs();
+    if (!db) return;
+
+    let first = true;
+    const loadTimer = setTimeout(() => { if (first) toast("The photos are taking a while to load."); }, 10000);
+    db.collection("photos").onSnapshot(snap => {
+      const keepId = current() && current().id;
+      S.photos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => p.asset)
+        .sort((a, b) => (+(a.year || 9999) - +(b.year || 9999)) || ((a.addedAt || 0) - (b.addedAt || 0)));
+      if (first && S.photos.length) { clearTimeout(loadTimer); first = false; S.idx = todayIndex(S.photos.length); }
+      else if (first) { clearTimeout(loadTimer); first = false; }
+      else { const k = S.photos.findIndex(p => p.id === keepId); S.idx = k >= 0 ? k : Math.min(S.idx, Math.max(0, S.photos.length - 1)); }
+      renderDeck(); renderSleeves();
+    }, () => { clearTimeout(loadTimer); toast("The photos couldn't be loaded."); });
+
+    db.doc("meta/liner").onSnapshot(s => { if (s.exists) { S.liner = s.data(); renderLiner(); } }, () => {});
+    db.collection("songs").onSnapshot(snap => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      S.packs = docs.filter(d => Array.isArray(d.list)).sort((a, b) => (a.order || 0) - (b.order || 0));
+      S.songs = docs.filter(s => !Array.isArray(s.list) && s.title).sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+      renderSongs();
+    }, () => {});
+    db.collection("records").onSnapshot(snap => {
+      const playingId = R.playing && S.records[R.i] && S.records[R.i].id;
+      S.records = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.asset && r.title).sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+      const k = S.records.findIndex(r => r.id === playingId);
+      R.i = k >= 0 ? k : Math.min(R.i, Math.max(0, S.records.length - 1));
+      if (!S.records.length && R.playing) stop();
+      renderMoods(); renderCrate(); renderSongs();
+    }, () => {});
+    db.doc("meta/playlist").onSnapshot(s => { S.playlistUrl = s.exists ? (s.data().url || "") : ""; renderSongs(); }, () => {});
+  })();
+})();
+</script>
