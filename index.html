@@ -305,9 +305,6 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
 .song-side h2 .deva { font-family: var(--deva); display: block; font-size: .62em; color: var(--brass); margin-top: 6px; }
 .credits { font-size: 14px; color: var(--muted); margin: 0; }
 .credits b { color: var(--paper); font-weight: 600; }
-.sing { background: #120d0b; border: 1px solid #000; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.sing p { margin: 0; font-size: 14px; color: var(--muted); }
-.sing code { font-family: var(--mono); font-size: 12.5px; color: var(--paper); background: var(--plinth); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: block; white-space: pre-wrap; line-height: 1.5; }
 .lyrics { background: #f4ead6; color: #2a1c10; border-radius: 6px; padding: clamp(22px, 5vw, 48px); box-shadow: 0 20px 50px -20px rgba(0,0,0,.8); }
 .lyrics .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #d8c6a5; padding-bottom: 14px; margin-bottom: 8px; }
 .lyrics .top .eyebrow { color: #8a5a22; }
@@ -372,15 +369,6 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
         <p class="hint">The whole song, sung. Follow along with the words below.</p>
       </div>
       <p class="credits">Words by <b>Mumma</b>, <b>Bhaiya</b>, <b>Shriya</b>, and <b>Leo &amp; Shiro</b>. Set to a slow, warm Hindi melody in the spirit of the old songs Papa loves.</p>
-      <div class="sing">
-        <div class="eyebrow">Make it sing</div>
-        <p>Paste the lyrics and this style into an AI music app like Suno, pick the version you love, then add the song file with <b>Add a song file</b> in Papa's Playlist so it plays on the turntable.</p>
-        <code id="styleText">Retro 1970s Bollywood ballad, warm male vocal in the style of a classic Hindi playback singer, gentle female harmony in the chorus, mandolin, soft tabla, strings, accordion fills, 76 BPM, nostalgic and loving, birthday celebration ending</code>
-        <div class="controls">
-          <button class="btn" id="copyStyle">Copy style</button>
-          <button class="btn" id="copyLyrics">Copy lyrics</button>
-        </div>
-      </div>
     </div>
 
     <div class="lyrics hi" id="lyrics">
@@ -1445,19 +1433,11 @@ Happy 54th birthday Papa!!</p></details>
   }
   $("scHi").onclick = () => setScript("hi");
   $("scRo").onclick = () => setScript("ro");
-  // Suno-style section tags, so an AI music app knows which part is which.
-  const songText = () => SONG.map(v => "[" + (v.kind === "chorus" ? "Chorus" : v.kind === "spoken" ? (v.note === "outro" ? "Outro" : "Intro") : v.note.startsWith("verse") ? "Verse" : v.note.startsWith("bridge") ? "Bridge" : "Pre-Chorus") + "]\n" + v.lines.map(l => l[script === "hi" ? 0 : 1]).join("\n")).join("\n\n");
-  async function copyText(t, done) {
-    try { await navigator.clipboard.writeText(t); toast(done); }
-    catch (e) { toast("Copying isn't allowed here. Select the text and copy it instead."); }
-  }
-  $("copyStyle").onclick = () => copyText($("styleText").textContent, "Style copied");
-  $("copyLyrics").onclick = () => copyText(songText(), "Lyrics copied (" + (script === "hi" ? "Hindi" : "Roman") + ")");
   renderSong();
 
   /* ---------- Playing our song ---------- */
   // The sung version of the song, stored as a still-frame video because the store takes video, not audio.
-  const SONG_FILE = "/_blob/65da49ee75a325ec9dcd829eaf51bc1e";
+  const SONG_FILE = "/_blob/c8a70b49d507c223b57b6aa79af0fe78";
   const P = { on: false, audio: new Audio() };
   P.audio.preload = "metadata"; P.audio.src = SONG_FILE;
   function songTick() {

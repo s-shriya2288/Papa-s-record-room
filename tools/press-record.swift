@@ -50,7 +50,20 @@ func frame() -> CVPixelBuffer {
   CVPixelBufferUnlockBaseAddress(pb!, [])
   return pb!
 }
-let end = duration.isValid && duration > .zero ? duration : CMTime(seconds: 1, preferredTimescale: 600)
+// The length comes from the audio itself: some files (WhatsApp voice notes) report a duration twice too long.
+var end = CMTime.zero
+if let probe = try? AVAssetReader(asset: asset) {
+  let pOut = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+  probe.add(pOut)
+  if probe.startReading() {
+    while let buf = pOut.copyNextSampleBuffer() {
+      let bufEnd = CMTimeAdd(CMSampleBufferGetPresentationTimeStamp(buf), CMSampleBufferGetDuration(buf))
+      if bufEnd.isValid && bufEnd > end { end = bufEnd }
+    }
+  }
+}
+if end <= .zero { end = duration.isValid && duration > .zero ? duration : CMTime(seconds: 1, preferredTimescale: 600) }
+
 for t in [CMTime.zero, CMTimeSubtract(end, CMTime(value: 1, timescale: 30))] {
   while !vIn.isReadyForMoreMediaData { usleep(1000) }
   adaptor.append(frame(), withPresentationTime: t)
@@ -62,6 +75,7 @@ while let buf = rOut.copyNextSampleBuffer() {
   aIn.append(buf)
 }
 aIn.markAsFinished()
+writer.endSession(atSourceTime: end)
 writer.finishWriting { sem.signal() }
 sem.wait()
 if writer.status == .completed {
