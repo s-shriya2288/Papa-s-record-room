@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="walnut">#1D1512</color>
+  <color name="brass">#D6A85A</color>
+  <style name="Room" parent="android:Theme.Material.NoActionBar">
+    <item name="android:windowBackground">@color/walnut</item>
+    <item name="android:statusBarColor">@color/walnut</item>
+    <item name="android:navigationBarColor">@color/walnut</item>
+    <item name="android:colorAccent">@color/brass</item>
+  </style>
+</resources>

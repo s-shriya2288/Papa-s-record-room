@@ -22,3 +22,11 @@ swiftc -O tools/press-record.swift -o tools/press-record
 ```
 
 Only use songs the family owns.
+
+## Android app
+
+Download: [PapasRecordRoom.apk](app/PapasRecordRoom.apk). On the phone, open the file and allow installing from this source when Android asks.
+
+The app shows a spinning record, then opens the Record Room in Chrome, where Papa stays signed in to Claude. The room must be shared with his Claude account from the page's Share menu.
+
+Source is in `android/`; build it with `android/build.sh` (needs the Android SDK and JDK 17, no Gradle).
