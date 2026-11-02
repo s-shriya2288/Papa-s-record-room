@@ -433,7 +433,7 @@ section, header, nav { scroll-margin-top: 16px; }
   <section id="song" class="song-sec" aria-labelledby="songHead">
     <div class="song-side">
       <figure class="song-photo">
-        <img src="/_blob/908d6d6322cec9ad8eed20cb0b430a8a" alt="Papa smiling in a grey striped polo, with Mumma's birthday poem beside him">
+        <img id="songPhoto" src="/_blob/908d6d6322cec9ad8eed20cb0b430a8a" alt="Papa smiling in a grey striped polo, with Mumma's birthday poem beside him">
         <figcaption>For Papa, on his 54th</figcaption>
       </figure>
       <div>
@@ -710,7 +710,12 @@ Happy 54th birthday Papa!!</p></details>
   const use = n => (window.claude && window.claude.use) ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
 
   const S = { photos: [], records: [], idx: 0, db: null, assets: null, downloads: null, canEdit: false, liner: null, editing: null };
-  const blobUrl = id => "/_blob/" + id;
+  // Inside Claude, files live in the artifact's store ("/_blob/<id>"). Hosted anywhere else (Vercel, GitHub Pages),
+  // the page uses the copies in the repo: a stored value with a "/" is already such a path.
+  const IN_CLAUDE = !!(window.claude && window.claude.use) || location.hostname.endsWith("claude.ai") || location.hostname.endsWith("claudeusercontent.com");
+  const blobUrl = id => String(id).includes("/") ? id : "/_blob/" + id;
+  const media = (id, file) => IN_CLAUDE ? "/_blob/" + id : file;
+  if (!IN_CLAUDE) $("songPhoto").src = "media/papa-54th.jpg";
 
   let toastT;
   function toast(msg) {
@@ -1461,7 +1466,7 @@ Happy 54th birthday Papa!!</p></details>
 
   /* ---------- Playing our song ---------- */
   // The sung version of the song, stored as a still-frame video because the store takes video, not audio.
-  const SONG_FILE = "/_blob/c8a70b49d507c223b57b6aa79af0fe78";
+  const SONG_FILE = media("c8a70b49d507c223b57b6aa79af0fe78", "media/tum-se-hi-ghar-sung.mp4");
   const P = { on: false, audio: new Audio() };
   P.audio.preload = "metadata"; P.audio.src = SONG_FILE;
   function songTick() {
@@ -1850,6 +1855,20 @@ Happy 54th birthday Papa!!</p></details>
   }
   setInterval(renderDash, 2000);
 
+  /* ---------- Hosted outside Claude: read-only, from the repo's files ---------- */
+  async function loadFromRepo() {
+    const get = u => fetch(u).then(r => r.ok ? r.json() : null).catch(() => null);
+    const [hi, en, photos] = await Promise.all([get("data/playlist-hindi.json"), get("data/playlist-english.json"), get("data/photos.json")]);
+    S.packs = [hi && { id: "hindi", ...hi }, en && { id: "english", ...en }].filter(Boolean);
+    S.records = [{ id: "tum-se-hi-ghar", asset: "media/tum-se-hi-ghar-sung.mp4", title: "Tum Se Hi Ghar", artist: "The family, for Papa's 54th" }];
+    if (Array.isArray(photos) && photos.length) {
+      S.photos = photos.filter(p => p && p.asset).map((p, i) => ({ id: "repo-" + i, ...p }));
+      S.idx = todayIndex(S.photos.length);
+    }
+    S.db = { readOnly: true }; // so empty states read as "nothing yet", not "sign in"
+    renderDeck(); renderSleeves(); renderSongs(); renderMoods(); renderCrate(); renderShelf(); renderDash();
+  }
+
   /* ---------- Boot ---------- */
   renderDeck(); renderSleeves();
 
@@ -1864,7 +1883,7 @@ Happy 54th birthday Papa!!</p></details>
     $("deckAdd").onclick = () => $("fileInput").click();
     $("editLiner").hidden = !(db && S.canEdit);
     renderDeck(); renderSleeves(); renderSongs(); renderShelf();
-    if (!db) return;
+    if (!db) { if (!IN_CLAUDE) loadFromRepo(); return; }
 
     let first = true;
     const loadTimer = setTimeout(() => { if (first) toast("The photos are taking a while to load."); }, 10000);
