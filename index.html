@@ -1592,7 +1592,7 @@ Happy 54th birthday Papa!!</p></details>
     if (!n) {
       $("libEmpty").innerHTML = !S.db ? "<strong>Books load when you open this page signed in to Claude.</strong>"
         : S.assets ? "<strong>The shelf is empty.</strong> Tap <strong>Add a book</strong> and choose a PDF, EPUB, or text file (up to 20 MB). It opens right here, on the page where he stopped."
-        : "<strong>No books yet.</strong> Only people with edit access can add books.";
+        : "<strong>No books yet.</strong> Ask the owner to share this page with you, then you can add books too.";
       return;
     }
     const nowId = S.books.reduce((a, b) => (b.readAt || 0) > ((a && a.readAt) || 0) ? b : a, null);
@@ -1868,6 +1868,9 @@ Happy 54th birthday Papa!!</p></details>
       S.idx = todayIndex(S.photos.length);
     }
     S.db = { readOnly: true }; // so empty states read as "nothing yet", not "sign in"
+    // Books are added on the Claude page, where they're stored; this copy can only point there.
+    const ab = $("addBook"); ab.hidden = false;
+    ab.onclick = e => { e.preventDefault(); window.open("https://claude.ai/artifact/6srz6H2Dz1aEBrgoVh1H7P#library", "_blank", "noopener"); };
     renderDeck(); renderSleeves(); renderSongs(); renderMoods(); renderCrate(); renderShelf(); renderDash();
   }
 
