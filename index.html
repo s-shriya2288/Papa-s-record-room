@@ -369,7 +369,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
           <span class="np-time" id="songTime">0:00</span>
         </div>
         <div class="np-bar" aria-hidden="true"><div id="songFill"></div></div>
-        <p class="hint">A tune composed for these words: a humming voice carries the melody over tabla, piano and strings, and the words light up as it plays. It has no sung words yet; for a real singer, use Make it sing below.</p>
+        <p class="hint">The whole song, sung. Follow along with the words below.</p>
       </div>
       <p class="credits">Words by <b>Mumma</b>, <b>Bhaiya</b>, <b>Shriya</b>, and <b>Leo &amp; Shiro</b>. Set to a slow, warm Hindi melody in the spirit of the old songs Papa loves.</p>
       <div class="sing">
@@ -1442,7 +1442,6 @@ Happy 54th birthday Papa!!</p></details>
   function setScript(v) {
     script = v; try { localStorage.setItem("prr-script", script); } catch (e) {}
     renderSong();
-    if (P.on) { $("lyrics").classList.add("playing"); if (P.line && $("ln-" + P.line)) $("ln-" + P.line).classList.add("on"); }
   }
   $("scHi").onclick = () => setScript("hi");
   $("scRo").onclick = () => setScript("ro");
@@ -1457,45 +1456,24 @@ Happy 54th birthday Papa!!</p></details>
   renderSong();
 
   /* ---------- Playing our song ---------- */
-  // The song was composed and rendered to a file by tools/render-song.js (76 BPM, two bars a line,
-  // a four-bar intro, a two-bar interlude after the first chorus). The words light up on that same clock.
-  const SONG_FILE = "/_blob/5cbf54ba2bf6f8cfb0126590be7cdff5", BAR = 4 * 60 / 76, LEAD = .1;
-  const SONG_LINES = (() => {
-    const out = []; let bar = 4;
-    SONG.forEach((v, si) => { v.lines.forEach((_, li) => { out.push([bar * BAR + LEAD, si + "-" + li]); bar += 2; }); if (si === 3) bar += 2; });
-    out.push([bar * BAR + LEAD, ""]);
-    return out;
-  })();
-  const P = { on: false, line: "", audio: new Audio() };
+  // The sung version of the song, stored as a still-frame video because the store takes video, not audio.
+  const SONG_FILE = "/_blob/65da49ee75a325ec9dcd829eaf51bc1e";
+  const P = { on: false, audio: new Audio() };
   P.audio.preload = "metadata"; P.audio.src = SONG_FILE;
   function songTick() {
     const t = P.audio.currentTime, d = P.audio.duration || 0;
-    let line = "";
-    for (const [st, k] of SONG_LINES) { if (t >= st) line = k; else break; }
-    if (line !== P.line) {
-      if (P.line && $("ln-" + P.line)) $("ln-" + P.line).classList.remove("on");
-      P.line = line;
-      const sp = line && $("ln-" + line);
-      if (sp) {
-        sp.classList.add("on");
-        const r = sp.getBoundingClientRect();
-        if (r.top < 80 || r.bottom > innerHeight - 80) sp.scrollIntoView({ block: "center", behavior: "smooth" });
-      }
-    }
     $("songTime").textContent = mmss(t) + " / " + mmss(d);
     $("songFill").style.width = (d ? Math.min(100, t / d * 100) : 0) + "%";
   }
   function songPlay() {
     if (Y.playing || R.playing) stop();
     P.audio.volume = $("vol").value / 100;
-    P.audio.play().then(() => { P.on = true; $("lyrics").classList.add("playing"); renderSongBtn(); })
+    P.audio.play().then(() => { P.on = true; renderSongBtn(); })
       .catch(() => toast("The song couldn't play. Check the connection and try again."));
   }
   function songStop(ended) {
     if (!P.on) return;
     P.on = false; P.audio.pause(); if (!ended) P.audio.currentTime = 0;
-    if (P.line && $("ln-" + P.line)) $("ln-" + P.line).classList.remove("on");
-    P.line = ""; $("lyrics").classList.remove("playing");
     songTick(); renderSongBtn();
   }
   function renderSongBtn() {
@@ -1505,7 +1483,7 @@ Happy 54th birthday Papa!!</p></details>
   }
   P.audio.addEventListener("timeupdate", songTick);
   P.audio.addEventListener("loadedmetadata", songTick);
-  P.audio.addEventListener("ended", () => { songStop(true); P.audio.currentTime = 0; });
+  P.audio.addEventListener("ended", () => { songStop(true); P.audio.currentTime = 0; songTick(); });
   $("vol").addEventListener("input", e => { P.audio.volume = e.target.value / 100; });
   $("songPlay").onclick = () => P.on ? songStop() : songPlay();
 
