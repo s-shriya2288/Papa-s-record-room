@@ -1583,6 +1583,42 @@ Happy 54th birthday Papa!!</p></details>
     } catch (e) {}
     return { title: meta("title"), author: tag(opf, "creator").map(e => e.textContent.trim()).filter(Boolean).join(", "), chapters, cover };
   }
+  // Where books go: the artifact's store and db inside Claude; on the hosted copy (Vercel), the site's
+  // own file store through /api/upload and /api/books. Reading position stays on each device there.
+  const HOSTED = { on: false, lib: null, code: "" };
+  try { HOSTED.code = localStorage.getItem("prr-family-code") || ""; } catch (e) {}
+  const canAddBooks = () => HOSTED.on || !!(S.assets && S.db);
+  async function putBookFile(blob, type, name, folder = "files") {
+    if (!HOSTED.on) return (await S.assets.upload(blob, { type })).id;
+    if (!HOSTED.lib) HOSTED.lib = await import("https://cdn.jsdelivr.net/npm/@vercel/blob@2.8.0/dist/client.js/+esm");
+    const safe = String(name).normalize("NFKD").replace(/[^\w.-]+/g, "-").slice(-80) || "book";
+    for (let tries = 0; tries < 2; tries++) {
+      try {
+        const r = await HOSTED.lib.upload("books/" + folder + "/" + safe, blob, { access: "public", handleUploadUrl: "/api/upload", contentType: type, clientPayload: JSON.stringify({ code: HOSTED.code }) });
+        return r.url;
+      } catch (err) {
+        if (!/code/i.test(String(err && err.message)) || tries) throw err;
+        const c = prompt("Family code, to add books to Papa's shelf:");
+        if (!c) throw err;
+        HOSTED.code = c.trim(); try { localStorage.setItem("prr-family-code", HOSTED.code); } catch (e) {}
+      }
+    }
+  }
+  async function addBookRow(row) {
+    if (!HOSTED.on) return S.db.collection("books").add(row);
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    await putBookFile(new Blob([JSON.stringify({ id, ...row })], { type: "application/json" }), "application/json", id + ".json", "meta");
+    await loadHostedBooks();
+  }
+  async function loadHostedBooks() {
+    const list = await fetch("/api/books", { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (!Array.isArray(list)) return false;
+    let pos = {}; try { pos = JSON.parse(localStorage.getItem("prr-book-pos") || "{}"); } catch (e) {}
+    S.books = list.filter(b => b && b.asset && b.title).map(b => ({ ...b, ...(pos[b.id] || {}) }))
+      .sort((a, b) => ((b.readAt || 0) - (a.readAt || 0)) || ((b.addedAt || 0) - (a.addedAt || 0)));
+    renderShelf(); renderDash();
+    return true;
+  }
   const progress = b => b.kind === "pdf" ? (b.pages ? Math.min(1, (b.pos || 1) / b.pages) : 0) : Math.min(1, b.pos || 0);
 
   function renderShelf() {
@@ -1591,7 +1627,7 @@ Happy 54th birthday Papa!!</p></details>
     $("libEmpty").hidden = n > 0; shelf.hidden = !n;
     if (!n) {
       $("libEmpty").innerHTML = !S.db ? "<strong>Books load when you open this page signed in to Claude.</strong>"
-        : S.assets ? "<strong>The shelf is empty.</strong> Tap <strong>Add a book</strong> and choose a PDF, EPUB, or text file (up to 20 MB). It opens right here, on the page where he stopped."
+        : canAddBooks() ? "<strong>The shelf is empty.</strong> Tap <strong>Add a book</strong> and choose a PDF, EPUB, or text file (up to 20 MB). It opens right here, on the page where he stopped."
         : "<strong>No books yet.</strong> Ask the owner to share this page with you, then you can add books too.";
       return;
     }
@@ -1728,6 +1764,11 @@ Happy 54th birthday Papa!!</p></details>
       const b = B.book; if (!b || !S.db) return;
       const pos = B.pdf ? B.page : +textPos().toFixed(4);
       const data = { pos, readAt: Date.now() }; if (B.pdf) data.pages = B.pdf.numPages;
+      if (HOSTED.on) {
+        Object.assign(b, data);
+        try { const all = JSON.parse(localStorage.getItem("prr-book-pos") || "{}"); all[b.id] = data; localStorage.setItem("prr-book-pos", JSON.stringify(all)); } catch (e) {}
+        return;
+      }
       try { await S.db.doc("books/" + b.id).update(data); } catch (e) {}
     }, now ? 0 : 1200);
   }
@@ -1764,7 +1805,7 @@ Happy 54th birthday Papa!!</p></details>
 
   $("bookInput").onchange = async e => {
     const files = [...e.target.files]; e.target.value = "";
-    if (!files.length || !S.assets || !S.db) return;
+    if (!files.length || !canAddBooks()) return;
     let done = 0;
     for (const f of files) {
       const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name), isTxt = f.type === "text/plain" || /\.txt$/i.test(f.name);
@@ -1785,8 +1826,8 @@ Happy 54th birthday Papa!!</p></details>
             doc.destroy();
           } catch (err) {}
         }
-        const up = await S.assets.upload(f, { type: isPdf ? "application/pdf" : "text/plain" });
-        await S.db.collection("books").add({ asset: up.id, kind: isPdf ? "pdf" : "text", title: title.slice(0, 140) || "Untitled", author: author.slice(0, 140), pages, pos: isPdf ? 1 : 0, addedAt: Date.now() });
+        const asset = await putBookFile(f, isPdf ? "application/pdf" : "text/plain", f.name);
+        await addBookRow({ asset, kind: isPdf ? "pdf" : "text", title: title.slice(0, 140) || "Untitled", author: author.slice(0, 140), pages, pos: isPdf ? 1 : 0, addedAt: Date.now() });
         done++;
       } catch (err) {
         toast(f.name + " couldn't be added" + ((err && err.code) === "unsupported_type" ? " in this format." : ".")); await new Promise(r => setTimeout(r, 2500));
@@ -1802,11 +1843,11 @@ Happy 54th birthday Papa!!</p></details>
       const blob = new Blob([JSON.stringify({ v: 1, chapters: book.chapters })], { type: "application/json" });
       if (blob.size > 20 * 1024 * 1024) throw "too_large";
       toast("Putting " + (book.title || f.name) + " on the shelf…");
-      const up = await S.assets.upload(blob, { type: "application/json" });
+      const asset = await putBookFile(blob, "application/json", f.name.replace(/\.epub$/i, "") + ".json");
       let cover = "";
-      if (book.cover && book.cover.size < 15 * 1024 * 1024) { try { cover = (await S.assets.upload(book.cover, { type: book.cover.type })).id; } catch (e) {} }
+      if (book.cover && book.cover.size < 15 * 1024 * 1024) { try { cover = await putBookFile(book.cover, book.cover.type, "cover-" + f.name.replace(/\.epub$/i, "") + "." + book.cover.type.split("/")[1]); } catch (e) {} }
       const title = (book.title || f.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ")).trim().slice(0, 140) || "Untitled";
-      await S.db.collection("books").add({ asset: up.id, kind: "epub", title, author: (book.author || "").slice(0, 140), cover, pos: 0, chapters: book.chapters.length, addedAt: Date.now() });
+      await addBookRow({ asset, kind: "epub", title, author: (book.author || "").slice(0, 140), cover, pos: 0, chapters: book.chapters.length, addedAt: Date.now() });
       return true;
     } catch (err) {
       const code = err && (err.code || err);
@@ -1868,9 +1909,10 @@ Happy 54th birthday Papa!!</p></details>
       S.idx = todayIndex(S.photos.length);
     }
     S.db = { readOnly: true }; // so empty states read as "nothing yet", not "sign in"
-    // Books are added on the Claude page, where they're stored; this copy can only point there.
+    // Books: the site's own store when its /api is deployed; otherwise point to the Claude page.
+    HOSTED.on = await loadHostedBooks();
     const ab = $("addBook"); ab.hidden = false;
-    ab.onclick = e => { e.preventDefault(); window.open("https://claude.ai/artifact/6srz6H2Dz1aEBrgoVh1H7P#library", "_blank", "noopener"); };
+    if (!HOSTED.on) ab.onclick = e => { e.preventDefault(); window.open("https://claude.ai/artifact/6srz6H2Dz1aEBrgoVh1H7P#library", "_blank", "noopener"); };
     renderDeck(); renderSleeves(); renderSongs(); renderMoods(); renderCrate(); renderShelf(); renderDash();
   }
 
