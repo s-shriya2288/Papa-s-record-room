@@ -761,7 +761,7 @@ Happy 54th birthday Papa!!</p></details>
 
   function sources() {
     const list = [];
-    if (S.records.length) list.push({ key: "real", name: "Plays right here · " + S.records.length });
+    if (S.records.length) list.push({ key: "real", name: S.records.length === 1 ? "♪ " + S.records[0].title : "♪ Our songs · " + S.records.length });
     const packs = (S.packs || []).filter(p => (p.list || []).length), fam = S.songs || [];
     if (packs.length > 1 || (packs.length && fam.length)) list.push({ key: "all", name: "All his favourites" });
     packs.forEach(p => list.push({ key: "pack:" + p.id, name: (p.pack || p.name || "Playlist") + " · " + p.list.length }));
@@ -917,7 +917,7 @@ Happy 54th birthday Papa!!</p></details>
         await new Promise(r => setTimeout(r, 2500));
       }
     }
-    if (done) toast(done + (done === 1 ? " song is" : " songs are") + " on the turntable now. Pick “Plays right here”.");
+    if (done) toast(done + (done === 1 ? " song is" : " songs are") + " on the turntable now. Tap “Our songs” to play.");
   };
   $("vol").oninput = e => { if (A.out) A.out.gain.value = e.target.value / 100; };
 
@@ -929,10 +929,12 @@ Happy 54th birthday Papa!!</p></details>
       b.textContent = m.name; b.setAttribute("aria-pressed", !!c && m.key === c.key);
       b.onclick = () => {
         src = m.key; try { localStorage.setItem("prr-src", src); } catch (e) {}
+        // The family's own songs start straight away; a playlist pick waits for "Drop the needle"
+        // unless music is already playing, since it opens YouTube Music in a new tab.
         const was = Y.playing || R.playing;
         if (was) stop();
         renderMoods(); renderCrate();
-        if (was) play();
+        if (was || m.key === "real") play();
       };
       $("moods").appendChild(b);
     });
@@ -1181,7 +1183,7 @@ Happy 54th birthday Papa!!</p></details>
   const fromPack = (p, [title, artist, v]) => ({ title, artist, url: /^[\w-]{11}$/.test(v || "") ? "https://music.youtube.com/watch?v=" + v : "" });
   function tabs() {
     const t = [];
-    if (S.records.length) t.push({ key: "real", name: "Plays on the turntable", songs: S.records.map((r, i) => ({ ...r, coll: "records", rec: i })) });
+    if (S.records.length) t.push({ key: "real", name: "Our songs", songs: S.records.map((r, i) => ({ ...r, coll: "records", rec: i })) });
     t.push(...S.packs.map(p => ({ key: "pack:" + p.id, name: p.pack || p.name || "Playlist", songs: (p.list || []).map(r => fromPack(p, r)), playlist: p.playlist })));
     if (S.songs.length) t.push({ key: "family", name: "Added by family", songs: S.songs, playlist: S.playlistUrl });
     return t;
