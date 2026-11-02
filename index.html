@@ -1,7 +1,7 @@
 <title>Papa's Record Room</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Tiro+Devanagari+Hindi:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 /* Layout: a listening room. Turntable on the left, the deck's info card on the right,
    then the record sleeves as a track list, then the Intermission timer. One dark walnut look, on purpose. */
@@ -19,6 +19,7 @@
   --ok: #8fbf7f;
   --display: "Gloock", "Bodoni 72", "Didot", Georgia, serif;
   --body: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --deva: "Tiro Devanagari Hindi", "Kohinoor Devanagari", "Noto Serif Devanagari", serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: dark;
 }
@@ -291,6 +292,42 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
 .rd-pos select { max-width: 42vw; font: inherit; font-size: 13px; color: var(--paper); background: #120d0b; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
 @media (max-width: 560px) { .rd-bar .btn .wide, .rd-foot .btn .wide { display: none; } .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+
+/* Our song: the family's birthday song, printed like an LP's inner sleeve */
+.song-sec { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 36px; align-items: start; }
+@media (max-width: 860px) { .song-sec { grid-template-columns: minmax(0, 1fr); gap: 24px; } }
+.song-side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 20px; }
+@media (max-width: 860px) { .song-side { position: static; } }
+.song-photo { margin: 0; background: var(--paper); padding: 10px 10px 12px; border-radius: 4px; transform: rotate(-1.5deg); box-shadow: 0 20px 40px -16px rgba(0,0,0,.8); }
+.song-photo img { display: block; width: 100%; max-height: 520px; object-fit: cover; object-position: left top; }
+.song-photo figcaption { font-family: var(--display); color: #2a1c10; text-align: center; padding-top: 8px; font-size: 15px; }
+.song-side h2 { font-size: clamp(34px, 5vw, 52px); line-height: 1.02; }
+.song-side h2 .deva { font-family: var(--deva); display: block; font-size: .62em; color: var(--brass); margin-top: 6px; }
+.credits { font-size: 14px; color: var(--muted); margin: 0; }
+.credits b { color: var(--paper); font-weight: 600; }
+.sing { background: #120d0b; border: 1px solid #000; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sing p { margin: 0; font-size: 14px; color: var(--muted); }
+.sing code { font-family: var(--mono); font-size: 12.5px; color: var(--paper); background: var(--plinth); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: block; white-space: pre-wrap; line-height: 1.5; }
+.lyrics { background: #f4ead6; color: #2a1c10; border-radius: 6px; padding: clamp(22px, 5vw, 48px); box-shadow: 0 20px 50px -20px rgba(0,0,0,.8); }
+.lyrics .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #d8c6a5; padding-bottom: 14px; margin-bottom: 8px; }
+.lyrics .top .eyebrow { color: #8a5a22; }
+.script { display: inline-flex; border: 1px solid #c8b18b; border-radius: 999px; overflow: hidden; }
+.script button { border: 0; background: transparent; color: #5a4128; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+.script button[aria-pressed="true"] { background: #2a1c10; color: #f4ead6; }
+.verse { padding: 18px 0 6px; }
+.verse .who { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #8a5a22; margin-bottom: 8px; display: flex; gap: 10px; align-items: center; }
+.verse .who i { font-style: normal; color: #a08a6a; letter-spacing: .1em; }
+.verse p { margin: 0; font-size: clamp(18px, 2.3vw, 22px); line-height: 1.75; }
+.lyrics.hi .verse p { font-family: var(--deva); }
+.lyrics.ro .verse p { font-family: var(--display); font-size: clamp(17px, 2.1vw, 20px); }
+.verse.chorus p { font-weight: 600; }
+.verse.chorus { border-left: 3px solid #d6a85a; padding-left: 16px; margin-left: -19px; }
+.verse.spoken p { font-style: italic; color: #6b5440; }
+.letters { margin-top: 26px; border-top: 1px solid #d8c6a5; padding-top: 12px; }
+.letters details { border-bottom: 1px solid #e3d4b8; padding: 10px 0; }
+.letters summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+.letters .lt { margin: 10px 0 4px; white-space: pre-wrap; line-height: 1.7; font-size: 16px; }
+.letters .lt.deva { font-family: var(--deva); font-size: 18px; }
 </style>
 
 <div class="wrap">
@@ -306,6 +343,54 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       <button class="linkish" id="editLiner" hidden>Edit liner notes</button>
     </div>
   </header>
+
+  <section class="song-sec" aria-labelledby="songHead">
+    <div class="song-side">
+      <figure class="song-photo">
+        <img src="/_blob/908d6d6322cec9ad8eed20cb0b430a8a" alt="Papa smiling in a grey striped polo, with Mumma's birthday poem beside him">
+        <figcaption>For Papa, on his 54th</figcaption>
+      </figure>
+      <div>
+        <div class="eyebrow">Track 54 · Bonus track</div>
+        <h2 id="songHead">Tum Se Hi Ghar<span class="deva">तुम से ही घर</span></h2>
+      </div>
+      <p class="credits">Words by <b>Mumma</b>, <b>Bhaiya</b>, <b>Shriya</b>, and <b>Leo &amp; Shiro</b>. Set to a slow, warm Hindi melody in the spirit of the old songs Papa loves.</p>
+      <div class="sing">
+        <div class="eyebrow">Make it sing</div>
+        <p>Paste the lyrics and this style into an AI music app like Suno, pick the version you love, then add the song file with <b>Add a song file</b> in Papa's Playlist so it plays on the turntable.</p>
+        <code id="styleText">Retro 1970s Bollywood ballad, warm male vocal in the style of a classic Hindi playback singer, gentle female harmony in the chorus, mandolin, soft tabla, strings, accordion fills, 76 BPM, nostalgic and loving, birthday celebration ending</code>
+        <div class="controls">
+          <button class="btn" id="copyStyle">Copy style</button>
+          <button class="btn" id="copyLyrics">Copy lyrics</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lyrics hi" id="lyrics">
+      <div class="top">
+        <div class="eyebrow">Lyrics</div>
+        <div class="script" role="group" aria-label="Script">
+          <button id="scHi" aria-pressed="true">हिंदी</button>
+          <button id="scRo" aria-pressed="false">Roman</button>
+        </div>
+      </div>
+      <div id="verses"></div>
+      <div class="letters">
+        <div class="eyebrow" style="color:#8a5a22">Their own words</div>
+        <details><summary>From Mumma</summary><p class="lt deva">तुम्हारे ये मुस्कराहट दिल को सुकून देती है और तुम्हारे साथ का एहसास देती हैं 🥰
+लड़ती हूँ झगड़ती हूँ लेकिन यह जानती हूँ की तुम अपनी प्यार के जादू से मुझे मना लोगे।
+तुम्हारे जन्मदिन पर मैं भगवान से यही प्रार्थना करती हूँ, तुम हमेशा स्वस्थ रहो, खुश रहो। तुम्हारी ख़ुशी में हमारी ख़ुशी है।
+भगवान से मैं अपने लिए कुछ माँगती हूँ की हर जन्म में मुझे तुम्हारा ही साथ मिले, क्यों की तुम्हारे सिवा कोई मेरे नखरे, ख़्वाहिशें पूरी नहीं कर सकता।
+लव यू सो मच।
+मेरी उम्र भी तुम्हें लग जाए, क्यों की तुम्हारे बिना मेरा कोई अस्तित्व नहीं। 🥰🥰😘❤️❤️❤️</p></details>
+        <details><summary>From Bhaiya</summary><p class="lt">Papa, ab aapko toh pata hi hai ki aap hero ho humare ghar ke aur mere aur Shriya ke. Aapne toh har cheez mein support kiya hai aur aapse hi kaafi saari cheezein seekhi bhi hain. We are very proud of you and we have a lot to learn and grow. Thank you for supporting always and teaching us.
+
+Happy 54th birthday Papa!!</p></details>
+        <details><summary>From Shriya</summary><p class="lt">Papa, aapse aur Mumma se hi hamara ghar ghar banta hai. Aapki lambi conversations, aapki teachings, aur aapko tang karna somehow becomes the best part of our life. Aap khush hote ho tab hi hum khush reh paate hain. Hum bhale hi express nahi kar paate, but you are our inspiration and aap hi hamare sab kuch ho. We love you.</p></details>
+        <details><summary>From Leo &amp; Shiro</summary><p class="lt">Everything above, with extra love, and wagging tails. 🐾</p></details>
+      </div>
+    </div>
+  </section>
 
   <section class="deck" aria-label="Turntable">
     <div class="table" id="table">
@@ -1268,6 +1353,80 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   $("bmAgain").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; startSet(); };
   $("bmSend").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; window.scrollTo({ top: 0, behavior: "smooth" }); toast("Copy or save it, then open WhatsApp."); };
   renderPresets(); renderClock();
+
+  /* ---------- Our song for Papa ---------- */
+  // Each verse is [Hindi, Roman] line pairs, credited to whoever's words it grew from.
+  const SONG = [
+    { who: "Everyone", note: "softly, over the mandolin", kind: "spoken", lines: [
+      ["चौवन बरस… और वही एक मुस्कान", "Chauvan baras… aur wahi ek muskaan"],
+      ["हैप्पी बर्थडे, पापा", "Happy birthday, Papa"] ] },
+    { who: "Mumma", note: "verse 1", lines: [
+      ["तेरी ये मुस्कान, दिल को सुकून दे", "Teri ye muskaan, dil ko sukoon de"],
+      ["हर पल तेरे साथ का, एहसास दे", "Har pal tere saath ka, ehsaas de"],
+      ["लड़ूँ भी, झगड़ूँ भी, फिर भी ये जानूँ", "Ladoon bhi, jhagdoon bhi, phir bhi ye jaanoon"],
+      ["प्यार के जादू से, तू मुझको मना ले", "Pyaar ke jaadoo se, tu mujhko mana le"] ] },
+    { who: "Mumma", note: "pre-chorus", lines: [
+      ["मेरे नखरे, मेरी ख़्वाहिशें, तुम बिन कौन उठाए", "Mere nakhre, meri khwahishein, tum bin kaun uthaaye"],
+      ["रब से बस ये माँगूँ, हर जनम तू ही आए", "Rab se bas ye maangoon, har janam tu hi aaye"] ] },
+    { who: "Everyone", note: "chorus", kind: "chorus", lines: [
+      ["तुम से ही घर, घर बनता है", "Tum se hi ghar, ghar banta hai"],
+      ["तुम हँसो तो, ये घर हँसता है", "Tum hanso toh, ye ghar hansta hai"],
+      ["मेरी उमर भी तुमको लग जाए", "Meri umar bhi tumko lag jaaye"],
+      ["तुम बिन अपना, कोई जहाँ नहीं", "Tum bin apna, koi jahaan nahin"] ] },
+    { who: "Bhaiya", note: "verse 2", lines: [
+      ["आप हो हीरो इस घर के, मेरे और श्रिया के", "Aap ho hero is ghar ke, mere aur Shriya ke"],
+      ["हर मोड़ पे आपने, थामा हाथ", "Har mod pe aapne, thaama haath"],
+      ["आपसे सीखा, गिर के सँभलना", "Aapse seekha, gir ke sambhalna"],
+      ["आपसे सीखा, चलना साथ", "Aapse seekha, chalna saath"] ] },
+    { who: "Bhaiya", note: "pre-chorus", lines: [
+      ["फ़ख़्र है हमको आप पे, पापा", "Fakhr hai humko aap pe, Papa"],
+      ["अभी तो बहुत कुछ, सीखना है साथ", "Abhi toh bahut kuch, seekhna hai saath"] ] },
+    { who: "Shriya", note: "verse 3", lines: [
+      ["वो लंबी बातें, वो आपकी सीखें", "Wo lambi baatein, wo aapki seekhein"],
+      ["आपको सताना, सबसे हसीं पल", "Aapko sataana, sabse haseen pal"],
+      ["कह ना सकें हम, दिल की ये बातें", "Keh na sakein hum, dil ki ye baatein"],
+      ["आप ही प्रेरणा, आप ही हर पल", "Aap hi prerna, aap hi har pal"] ] },
+    { who: "Shriya", note: "pre-chorus", lines: [
+      ["आप ख़ुश हो तो, हम ख़ुश रह पाते", "Aap khush ho toh, hum khush reh paate"],
+      ["आप ही हमारे, सब कुछ हो", "Aap hi hamaare, sab kuch ho"] ] },
+    { who: "Leo & Shiro", note: "bridge, with a playful flute", lines: [
+      ["दरवाज़े पे बैठे, राह तकें हर शाम", "Darwaaze pe baithe, raah takein har shaam"],
+      ["दो नन्ही पूँछें, हिल हिल कहें तेरा नाम", "Do nanhi poonchhein, hil hil kahein tera naam"] ] },
+    { who: "Everyone", note: "last chorus, a step higher", kind: "chorus", lines: [
+      ["तुम से ही घर, घर बनता है", "Tum se hi ghar, ghar banta hai"],
+      ["तुम हँसो तो, ये घर हँसता है", "Tum hanso toh, ye ghar hansta hai"],
+      ["तुम हमेशा स्वस्थ रहो, ख़ुश रहो", "Tum hamesha swasth raho, khush raho"],
+      ["तुम्हारी ख़ुशी में, हमारी ख़ुशी है", "Tumhaari khushi mein, hamaari khushi hai"] ] },
+    { who: "Everyone", note: "outro", kind: "spoken", lines: [
+      ["चौवन दीये, एक ही दुआ", "Chauvan diye, ek hi dua"],
+      ["लव यू सो मच, पापा… हैप्पी 54th बर्थडे!", "Love you so much, Papa… Happy 54th birthday!"] ] },
+  ];
+  let script = "hi";
+  try { script = localStorage.getItem("prr-script") === "ro" ? "ro" : "hi"; } catch (e) {}
+  function renderSong() {
+    const box = $("verses"); box.innerHTML = "";
+    $("lyrics").className = "lyrics " + script;
+    $("scHi").setAttribute("aria-pressed", script === "hi"); $("scRo").setAttribute("aria-pressed", script === "ro");
+    SONG.forEach(v => {
+      const d = document.createElement("div"); d.className = "verse" + (v.kind ? " " + v.kind : "");
+      const w = document.createElement("div"); w.className = "who"; w.textContent = v.who;
+      const n = document.createElement("i"); n.textContent = v.note; w.appendChild(n);
+      const p = document.createElement("p"); p.textContent = v.lines.map(l => l[script === "hi" ? 0 : 1]).join("\n");
+      p.style.whiteSpace = "pre-line";
+      d.append(w, p); box.appendChild(d);
+    });
+  }
+  $("scHi").onclick = () => { script = "hi"; try { localStorage.setItem("prr-script", script); } catch (e) {} renderSong(); };
+  $("scRo").onclick = () => { script = "ro"; try { localStorage.setItem("prr-script", script); } catch (e) {} renderSong(); };
+  // Suno-style section tags, so an AI music app knows which part is which.
+  const songText = () => SONG.map(v => "[" + (v.kind === "chorus" ? "Chorus" : v.kind === "spoken" ? (v.note === "outro" ? "Outro" : "Intro") : v.note.startsWith("verse") ? "Verse" : v.note.startsWith("bridge") ? "Bridge" : "Pre-Chorus") + "]\n" + v.lines.map(l => l[script === "hi" ? 0 : 1]).join("\n")).join("\n\n");
+  async function copyText(t, done) {
+    try { await navigator.clipboard.writeText(t); toast(done); }
+    catch (e) { toast("Copying isn't allowed here. Select the text and copy it instead."); }
+  }
+  $("copyStyle").onclick = () => copyText($("styleText").textContent, "Style copied");
+  $("copyLyrics").onclick = () => copyText(songText(), "Lyrics copied (" + (script === "hi" ? "Hindi" : "Roman") + ")");
+  renderSong();
 
   /* ---------- Papa's Library ---------- */
   // Books are PDFs, plain-text files, or EPUBs in the asset store; each "books" row remembers where he stopped.
