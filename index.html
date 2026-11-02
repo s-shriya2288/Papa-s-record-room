@@ -251,6 +251,38 @@ header.top h1 em { font-style: normal; color: var(--brass); }
 .songs { max-height: 560px; overflow-y: auto; }
 #plMore { align-self: flex-start; }
 footer { color: var(--muted); font-size: 13px; text-align: center; }
+/* Library: a shelf of covers, and a reader that opens where he left off */
+.lib-intro { color: var(--muted); max-width: 52ch; margin: 8px 0 0; }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 22px 18px; margin-top: 22px; padding-bottom: 18px; border-bottom: 10px solid var(--plinth-hi); box-shadow: 0 14px 18px -14px rgba(0,0,0,.8); }
+.book { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.book .cover { position: relative; aspect-ratio: 2 / 3; border-radius: 3px 8px 8px 3px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 14px 12px 12px 18px; box-shadow: inset 6px 0 0 rgba(0,0,0,.25), 0 10px 20px -8px rgba(0,0,0,.8); transition: transform .2s; }
+.book .cover::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: linear-gradient(90deg, rgba(255,255,255,.12), transparent); }
+.book:hover .cover { transform: translateY(-4px); }
+.book .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.book .ct { font-family: var(--display); font-size: 18px; line-height: 1.1; color: var(--paper); overflow-wrap: anywhere; position: relative; }
+.book .ca { font-size: 12px; color: rgba(241,230,210,.75); position: relative; }
+.book .bt { font-weight: 600; font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+.book .bp { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.book .bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.book .bar i { display: block; height: 100%; background: var(--brass); }
+.book .now { position: absolute; top: 8px; right: 8px; z-index: 1; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; background: var(--brass); color: #22170f; padding: 3px 7px; border-radius: 999px; }
+.reader { position: fixed; inset: 0; z-index: 55; background: #0f0b09; display: flex; flex-direction: column; }
+.rd-bar, .rd-foot { display: flex; align-items: center; gap: 10px; padding: 10px max(16px, env(safe-area-inset-left, 0px)); background: var(--plinth); border-bottom: 1px solid var(--line); }
+.rd-bar { padding-top: max(10px, env(safe-area-inset-top, 0px)); }
+.rd-foot { border-bottom: 0; border-top: 1px solid var(--line); justify-content: space-between; padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); }
+.rd-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rd-title b { font-family: var(--display); font-weight: 400; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd-title span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd-tools { display: flex; gap: 6px; }
+.rd-tools .btn, .rd-foot .btn { padding: 8px 12px; }
+.rd-page { flex: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 18px 12px; overscroll-behavior: contain; }
+.rd-page canvas { display: block; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.6); max-width: none; }
+.rd-page article { background: #f4ead6; color: #2a1c10; max-width: 680px; width: 100%; padding: clamp(20px, 5vw, 56px); border-radius: 4px; font-family: Georgia, "Iowan Old Style", serif; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+.rd-msg { color: var(--muted); align-self: center; text-align: center; max-width: 40ch; margin: auto; }
+.rd-pos { font-family: var(--mono); font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.rd-pos input { width: 64px; text-align: center; font-family: var(--mono); font-size: 14px; color: var(--paper); background: #120d0b; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+@media (max-width: 560px) { .rd-bar .btn .wide, .rd-foot .btn .wide { display: none; } .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 </style>
 
 <div class="wrap">
@@ -385,6 +417,25 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     <div class="empty-note" id="emptyNote" hidden></div>
   </section>
 
+  <section aria-labelledby="libHead">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">The reading room</div>
+        <h2 id="libHead">Papa's Library</h2>
+        <p class="lib-intro">Every book he's reading, on one shelf. Tap a book to read it right here. It opens on the page where he stopped.</p>
+      </div>
+      <div class="controls">
+        <label class="btn primary" id="addBook" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add a book
+          <input type="file" id="bookInput" accept="application/pdf,.pdf,text/plain,.txt,.epub" multiple hidden>
+        </label>
+      </div>
+    </div>
+    <div class="shelf" id="shelf"></div>
+    <div class="empty-note" id="libEmpty" hidden></div>
+  </section>
+
   <section class="inter" aria-labelledby="interHead">
     <div>
       <div class="eyebrow">Intermission</div>
@@ -483,6 +534,47 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       <div class="controls">
         <button class="btn" id="bmAgain">Start next set</button>
         <button class="btn" id="bmClose">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="reader" id="reader" hidden role="dialog" aria-modal="true" aria-labelledby="rdTitle">
+  <div class="rd-bar">
+    <button class="btn" id="rdClose" aria-label="Back to the shelf">‹ <span class="wide">Shelf</span></button>
+    <div class="rd-title"><b id="rdTitle"></b><span id="rdAuthor"></span></div>
+    <div class="rd-tools">
+      <button class="btn" id="rdSmaller" aria-label="Smaller">A−</button>
+      <button class="btn" id="rdBigger" aria-label="Bigger">A+</button>
+      <button class="btn" id="rdEdit" hidden>Edit</button>
+    </div>
+  </div>
+  <div class="rd-page" id="rdPage">
+    <canvas id="rdCanvas" hidden></canvas>
+    <article id="rdText" hidden></article>
+    <p class="rd-msg" id="rdMsg">Opening the book…</p>
+  </div>
+  <div class="rd-foot">
+    <button class="btn" id="rdPrev" aria-label="Previous page">‹ <span class="wide">Previous</span></button>
+    <div class="rd-pos" id="rdPos"></div>
+    <button class="btn" id="rdNext" aria-label="Next page"><span class="wide">Next</span> ›</button>
+  </div>
+</div>
+
+<div class="overlay" id="bookModal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="bkHead">
+    <h3 id="bkHead">About this book</h3>
+    <label class="field" for="bkTitle">Title
+      <input id="bkTitle" maxlength="140">
+    </label>
+    <label class="field" for="bkAuthor">Author
+      <input id="bkAuthor" maxlength="140">
+    </label>
+    <div class="row">
+      <button class="btn danger" id="bkDelete">Remove book</button>
+      <div class="controls">
+        <button class="btn" id="bkCancel">Close</button>
+        <button class="btn primary" id="bkSave">Save</button>
       </div>
     </div>
   </div>
@@ -1169,6 +1261,232 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   $("bmSend").onclick = () => { $("breakModal").hidden = true; document.title = "Papa's Record Room"; window.scrollTo({ top: 0, behavior: "smooth" }); toast("Copy or save it, then open WhatsApp."); };
   renderPresets(); renderClock();
 
+  /* ---------- Papa's Library ---------- */
+  // Books are PDFs or plain-text files in the asset store; each "books" row remembers where he stopped.
+  S.books = [];
+  const B = { book: null, pdf: null, page: 1, task: null, zoom: 1, font: 19, saveT: null, covers: {}, coverQ: Promise.resolve() };
+  try { B.zoom = +localStorage.getItem("prr-zoom") || 1; B.font = +localStorage.getItem("prr-font") || 19; } catch (e) {}
+  const CLOTH = ["#5b2a22", "#23413a", "#2c3a5a", "#5a4322", "#4a2a4a", "#39472a"];
+  const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  let pdfLib = null;
+  function loadPdfJs() {
+    if (pdfLib) return pdfLib;
+    pdfLib = new Promise((res, rej) => {
+      const sc = document.createElement("script"); sc.src = PDFJS + "pdf.min.js";
+      sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.js"; res(window.pdfjsLib); };
+      sc.onerror = () => { pdfLib = null; rej(); };
+      document.head.appendChild(sc);
+    });
+    return pdfLib;
+  }
+  const progress = b => b.kind === "pdf" ? (b.pages ? Math.min(1, (b.pos || 1) / b.pages) : 0) : Math.min(1, b.pos || 0);
+
+  function renderShelf() {
+    const shelf = $("shelf"); shelf.innerHTML = "";
+    const n = S.books.length;
+    $("libEmpty").hidden = n > 0; shelf.hidden = !n;
+    if (!n) {
+      $("libEmpty").innerHTML = !S.db ? "<strong>Books load when you open this page signed in to Claude.</strong>"
+        : S.assets ? "<strong>The shelf is empty.</strong> Tap <strong>Add a book</strong> and choose a PDF or a text file (up to 20 MB). It opens right here, on the page where he stopped."
+        : "<strong>No books yet.</strong> Only people with edit access can add books.";
+      return;
+    }
+    const nowId = S.books.reduce((a, b) => (b.readAt || 0) > ((a && a.readAt) || 0) ? b : a, null);
+    S.books.forEach((b, i) => {
+      const el = document.createElement("button"); el.className = "book";
+      const pr = progress(b);
+      el.innerHTML = '<div class="cover"><span class="ct"></span><span class="ca"></span></div><span class="bt"></span><div class="bar"><i></i></div><span class="bp"></span>';
+      const cv = el.querySelector(".cover"); cv.style.background = CLOTH[i % CLOTH.length];
+      el.querySelector(".ct").textContent = b.title; el.querySelector(".ca").textContent = b.author || "";
+      el.querySelector(".bt").textContent = b.title;
+      el.querySelector(".bar i").style.width = Math.round(pr * 100) + "%";
+      el.querySelector(".bp").textContent = !b.readAt ? "Not started" : pr >= .99 ? "Finished" : b.kind === "pdf" ? "Page " + (b.pos || 1) + " of " + (b.pages || "?") : Math.round(pr * 100) + "% read";
+      if (nowId && nowId.id === b.id && b.readAt && pr < .99) { const t = document.createElement("span"); t.className = "now"; t.textContent = "Reading now"; cv.appendChild(t); }
+      el.setAttribute("aria-label", b.title + (b.author ? " by " + b.author : ""));
+      el.onclick = () => openBook(b);
+      if (b.kind === "pdf") coverFor(b, cv);
+      shelf.appendChild(el);
+    });
+  }
+  // The first page of a PDF becomes its cover, drawn one book at a time and kept for this visit.
+  function coverFor(b, cv) {
+    const put = url => { const img = new Image(); img.alt = ""; img.src = url; cv.appendChild(img); };
+    if (B.covers[b.asset]) return put(B.covers[b.asset]);
+    B.coverQ = B.coverQ.then(async () => {
+      try {
+        const lib = await loadPdfJs(), doc = await lib.getDocument({ url: blobUrl(b.asset), disableAutoFetch: true }).promise;
+        const pg = await doc.getPage(1), vp = pg.getViewport({ scale: 1 }), sc = 300 / vp.width, v2 = pg.getViewport({ scale: sc });
+        const c = document.createElement("canvas"); c.width = v2.width; c.height = v2.height;
+        await pg.render({ canvasContext: c.getContext("2d"), viewport: v2 }).promise;
+        B.covers[b.asset] = c.toDataURL("image/jpeg", .8); doc.destroy();
+        if (cv.isConnected) put(B.covers[b.asset]);
+      } catch (e) {}
+    });
+  }
+
+  async function openBook(b) {
+    B.book = b; B.pdf = null;
+    $("rdTitle").textContent = b.title; $("rdAuthor").textContent = b.author || "";
+    $("rdEdit").hidden = !(S.db && S.canEdit);
+    $("rdCanvas").hidden = true; $("rdText").hidden = true; $("rdMsg").hidden = false; $("rdMsg").textContent = "Opening the book…";
+    $("rdPos").innerHTML = "";
+    $("reader").hidden = false; document.body.style.overflow = "hidden"; $("rdClose").focus();
+    try {
+      if (b.kind === "pdf") {
+        const lib = await loadPdfJs();
+        const doc = await lib.getDocument({ url: blobUrl(b.asset) }).promise;
+        if (B.book !== b) return doc.destroy();
+        B.pdf = doc; B.page = Math.min(doc.numPages, Math.max(1, b.pos || 1));
+        $("rdPos").innerHTML = 'Page <input id="rdJump" type="number" inputmode="numeric" min="1" aria-label="Go to page"> of <span id="rdTotal"></span>';
+        $("rdTotal").textContent = doc.numPages; $("rdJump").max = doc.numPages;
+        $("rdJump").onchange = e => goPage(+e.target.value || 1);
+        $("rdJump").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
+        await drawPage();
+      } else {
+        const text = await fetch(blobUrl(b.asset)).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(buf => new TextDecoder("utf-8").decode(buf));
+        if (B.book !== b) return;
+        const art = $("rdText"); art.textContent = text; art.style.fontSize = B.font + "px";
+        $("rdMsg").hidden = true; art.hidden = false;
+        const pg = $("rdPage");
+        requestAnimationFrame(() => { pg.scrollTop = (b.pos || 0) * (pg.scrollHeight - pg.clientHeight); textPos(); });
+      }
+      savePos(true);
+    } catch (e) {
+      $("rdMsg").textContent = "This book couldn't open. Check the connection and try again.";
+    }
+  }
+  async function drawPage() {
+    const doc = B.pdf; if (!doc) return;
+    if (B.task) { try { B.task.cancel(); } catch (e) {} }
+    const pg = await doc.getPage(B.page), box = $("rdPage");
+    const base = pg.getViewport({ scale: 1 });
+    const fit = Math.min((box.clientWidth - 24) / base.width, 900 / base.width) * B.zoom;
+    const dpr = Math.min(2, window.devicePixelRatio || 1), vp = pg.getViewport({ scale: fit * dpr });
+    const c = $("rdCanvas"); c.width = vp.width; c.height = vp.height;
+    c.style.width = Math.floor(vp.width / dpr) + "px"; c.style.height = Math.floor(vp.height / dpr) + "px";
+    B.task = pg.render({ canvasContext: c.getContext("2d"), viewport: vp });
+    try { await B.task.promise; } catch (e) { return; }
+    $("rdMsg").hidden = true; c.hidden = false; box.scrollTop = 0;
+    if (document.activeElement !== $("rdJump")) $("rdJump").value = B.page;
+    $("rdPrev").disabled = B.page <= 1; $("rdNext").disabled = B.page >= doc.numPages;
+  }
+  function goPage(n) {
+    if (!B.pdf) return;
+    const p = Math.min(B.pdf.numPages, Math.max(1, Math.round(n)));
+    if (p === B.page) { $("rdJump").value = p; return; }
+    B.page = p; drawPage(); savePos();
+  }
+  function textPos() {
+    const pg = $("rdPage"), span = pg.scrollHeight - pg.clientHeight;
+    const f = span > 0 ? pg.scrollTop / span : 1;
+    $("rdPos").textContent = Math.round(f * 100) + "% read";
+    $("rdPrev").disabled = pg.scrollTop <= 0; $("rdNext").disabled = f >= .999;
+    return f;
+  }
+  function turn(d) {
+    if (!B.book) return;
+    if (B.pdf) return goPage(B.page + d);
+    const pg = $("rdPage"); pg.scrollBy({ top: d * (pg.clientHeight - 60), behavior: "smooth" });
+  }
+  // One write at a time, a moment after he stops turning pages.
+  function savePos(now) {
+    clearTimeout(B.saveT);
+    B.saveT = setTimeout(async () => {
+      const b = B.book; if (!b || !S.db) return;
+      const pos = B.pdf ? B.page : +textPos().toFixed(4);
+      const data = { pos, readAt: Date.now() }; if (B.pdf) data.pages = B.pdf.numPages;
+      try { await S.db.doc("books/" + b.id).update(data); } catch (e) {}
+    }, now ? 0 : 1200);
+  }
+  function closeBook() {
+    if (B.book) savePos(true);
+    $("reader").hidden = true; document.body.style.overflow = "";
+    if (B.task) { try { B.task.cancel(); } catch (e) {} }
+    setTimeout(() => { if (B.pdf) { B.pdf.destroy(); B.pdf = null; } B.book = null; }, 50);
+  }
+  $("rdClose").onclick = closeBook;
+  $("rdPrev").onclick = () => turn(-1);
+  $("rdNext").onclick = () => turn(1);
+  $("rdPage").addEventListener("scroll", () => { if (B.book && !B.pdf && !$("rdText").hidden) { textPos(); savePos(); } });
+  const resize = d => {
+    if (B.pdf) { B.zoom = Math.min(3, Math.max(.6, +(B.zoom + d * .2).toFixed(2))); try { localStorage.setItem("prr-zoom", B.zoom); } catch (e) {} drawPage(); }
+    else { B.font = Math.min(30, Math.max(14, B.font + d * 2)); try { localStorage.setItem("prr-font", B.font); } catch (e) {} $("rdText").style.fontSize = B.font + "px"; }
+  };
+  $("rdSmaller").onclick = () => resize(-1);
+  $("rdBigger").onclick = () => resize(1);
+  document.addEventListener("keydown", e => {
+    if ($("reader").hidden || e.target.tagName === "INPUT" || !$("bookModal").hidden) return;
+    if (e.key === "Escape") closeBook();
+    else if (e.key === "ArrowRight" || (e.key === " " && B.pdf)) { e.preventDefault(); turn(1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); turn(-1); }
+  });
+  let tx = null;
+  $("rdPage").addEventListener("touchstart", e => { tx = e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
+  $("rdPage").addEventListener("touchend", e => {
+    if (!tx || !B.pdf || B.zoom > 1) return;
+    const dx = e.changedTouches[0].clientX - tx[0], dy = e.changedTouches[0].clientY - tx[1];
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) turn(dx < 0 ? 1 : -1);
+  });
+  window.addEventListener("resize", () => { if (B.pdf && !$("reader").hidden) drawPage(); });
+
+  $("bookInput").onchange = async e => {
+    const files = [...e.target.files]; e.target.value = "";
+    if (!files.length || !S.assets || !S.db) return;
+    let done = 0;
+    for (const f of files) {
+      const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name), isTxt = f.type === "text/plain" || /\.txt$/i.test(f.name);
+      if (!isPdf && !isTxt) { toast(f.name + " isn't a PDF or text file. EPUB books need to be saved as PDF first."); await new Promise(r => setTimeout(r, 2800)); continue; }
+      if (f.size > 20 * 1024 * 1024) { toast(f.name + " is over 20 MB."); await new Promise(r => setTimeout(r, 2500)); continue; }
+      toast("Putting " + f.name + " on the shelf…");
+      try {
+        let title = f.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ").trim(), author = "", pages = 0;
+        if (isPdf) {
+          try {
+            const lib = await loadPdfJs(), doc = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+            pages = doc.numPages;
+            const info = ((await doc.getMetadata()) || {}).info || {};
+            if (info.Title && info.Title.trim().length > 2 && !/^untitled|\.(docx?|indd|pdf)$/i.test(info.Title.trim())) title = info.Title.trim();
+            if (info.Author) author = info.Author.trim();
+            doc.destroy();
+          } catch (err) {}
+        }
+        const up = await S.assets.upload(f, { type: isPdf ? "application/pdf" : "text/plain" });
+        await S.db.collection("books").add({ asset: up.id, kind: isPdf ? "pdf" : "text", title: title.slice(0, 140) || "Untitled", author: author.slice(0, 140), pages, pos: isPdf ? 1 : 0, addedAt: Date.now() });
+        done++;
+      } catch (err) {
+        toast(f.name + " couldn't be added" + ((err && err.code) === "unsupported_type" ? " in this format." : ".")); await new Promise(r => setTimeout(r, 2500));
+      }
+    }
+    if (done) toast(done + (done === 1 ? " book is" : " books are") + " on the shelf. Tap one to start reading.");
+  };
+
+  $("rdEdit").onclick = () => {
+    const b = B.book; if (!b) return;
+    $("bkTitle").value = b.title || ""; $("bkAuthor").value = b.author || "";
+    const d = $("bkDelete"); d.classList.remove("armed"); d.textContent = "Remove book";
+    $("bookModal").hidden = false; $("bkTitle").focus();
+  };
+  $("bkCancel").onclick = () => $("bookModal").hidden = true;
+  $("bkSave").onclick = async () => {
+    const b = B.book; if (!b) return;
+    const title = $("bkTitle").value.trim().slice(0, 140) || b.title, author = $("bkAuthor").value.trim().slice(0, 140);
+    try {
+      await S.db.doc("books/" + b.id).update({ title, author });
+      b.title = title; b.author = author; $("rdTitle").textContent = title; $("rdAuthor").textContent = author;
+      $("bookModal").hidden = true; toast("Saved");
+    } catch (e) { toast("Couldn't save that."); }
+  };
+  $("bkDelete").onclick = async () => {
+    const d = $("bkDelete"), b = B.book; if (!b) return;
+    if (!d.classList.contains("armed")) { d.classList.add("armed"); d.textContent = "Tap again to remove"; return; }
+    try {
+      await S.db.doc("books/" + b.id).delete();
+      if (S.assets) S.assets.delete(b.asset).catch(() => {});
+      $("bookModal").hidden = true; closeBook(); toast("Book removed");
+    } catch (e) { toast("Couldn't remove the book."); }
+  };
+  renderShelf();
+
   /* ---------- Boot ---------- */
   renderDeck(); renderSleeves();
 
@@ -1179,9 +1497,10 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     $("addLabel").hidden = !assets;
     $("deckAdd").hidden = !assets;
     $("addRecord").hidden = !assets;
+    $("addBook").hidden = !assets;
     $("deckAdd").onclick = () => $("fileInput").click();
     $("editLiner").hidden = !(db && S.canEdit);
-    renderDeck(); renderSleeves(); renderSongs();
+    renderDeck(); renderSleeves(); renderSongs(); renderShelf();
     if (!db) return;
 
     let first = true;
@@ -1211,6 +1530,12 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       R.i = k >= 0 ? k : Math.min(R.i, Math.max(0, S.records.length - 1));
       if (!S.records.length && R.playing) stop();
       renderMoods(); renderCrate(); renderSongs();
+    }, () => {});
+    db.collection("books").onSnapshot(snap => {
+      S.books = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.asset && b.title)
+        .sort((a, b) => ((b.readAt || 0) - (a.readAt || 0)) || ((b.addedAt || 0) - (a.addedAt || 0)));
+      if (B.book) { const cur = S.books.find(b => b.id === B.book.id); if (cur) Object.assign(B.book, { title: cur.title, author: cur.author }); }
+      renderShelf();
     }, () => {});
     db.doc("meta/playlist").onSnapshot(s => { S.playlistUrl = s.exists ? (s.data().url || "") : ""; renderSongs(); }, () => {});
   })();
