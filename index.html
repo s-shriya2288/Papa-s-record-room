@@ -323,6 +323,12 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
 .verse.chorus p { font-weight: 600; }
 .verse.chorus { border-left: 3px solid #d6a85a; padding-left: 16px; margin-left: -19px; }
 .verse.spoken p { font-style: italic; color: #6b5440; }
+.songplay { display: flex; flex-direction: column; gap: 10px; }
+.songplay .row2 { display: flex; align-items: center; gap: 12px; }
+.songplay .np-bar { flex: 1; cursor: default; }
+.ln { border-radius: 4px; transition: background .3s, opacity .3s; padding: 0 2px; }
+.lyrics.playing .ln { opacity: .5; }
+.lyrics.playing .ln.on { opacity: 1; background: rgba(214,168,90,.4); }
 .letters { margin-top: 26px; border-top: 1px solid #d8c6a5; padding-top: 12px; }
 .letters details { border-bottom: 1px solid #e3d4b8; padding: 10px 0; }
 .letters summary { cursor: pointer; font-weight: 600; font-size: 15px; }
@@ -353,6 +359,17 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       <div>
         <div class="eyebrow">Track 54 · Bonus track</div>
         <h2 id="songHead">Tum Se Hi Ghar<span class="deva">तुम से ही घर</span></h2>
+      </div>
+      <div class="songplay">
+        <div class="row2">
+          <button class="btn primary" id="songPlay" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="currentColor" id="songIcon"><path d="M8 5v14l11-7z"/></svg>
+            <span id="songPlayText">Play our song</span>
+          </button>
+          <span class="np-time" id="songTime">0:00</span>
+        </div>
+        <div class="np-bar" aria-hidden="true"><div id="songFill"></div></div>
+        <p class="hint">A tune composed for these words: a humming voice carries the melody over tabla, piano and strings, and the words light up as it plays. It has no sung words yet; for a real singer, use Make it sing below.</p>
       </div>
       <p class="credits">Words by <b>Mumma</b>, <b>Bhaiya</b>, <b>Shriya</b>, and <b>Leo &amp; Shiro</b>. Set to a slow, warm Hindi melody in the spirit of the old songs Papa loves.</p>
       <div class="sing">
@@ -764,6 +781,7 @@ Happy 54th birthday Papa!!</p></details>
     renderPlay(); renderCrate(); startSlides();
   }
   function play() {
+    if (typeof songStop === "function") songStop();
     const c = currentSource();
     if (c && c.key === "real") return playReal(R.i);
     playFavourite();
@@ -1357,47 +1375,47 @@ Happy 54th birthday Papa!!</p></details>
   /* ---------- Our song for Papa ---------- */
   // Each verse is [Hindi, Roman] line pairs, credited to whoever's words it grew from.
   const SONG = [
-    { who: "Everyone", note: "softly, over the mandolin", kind: "spoken", lines: [
+    { who: "Everyone", note: "softly, over the mandolin", kind: "spoken", tune: "intro", lines: [
       ["चौवन बरस… और वही एक मुस्कान", "Chauvan baras… aur wahi ek muskaan"],
       ["हैप्पी बर्थडे, पापा", "Happy birthday, Papa"] ] },
-    { who: "Mumma", note: "verse 1", lines: [
+    { who: "Mumma", note: "verse 1", tune: "verse", lines: [
       ["तेरी ये मुस्कान, दिल को सुकून दे", "Teri ye muskaan, dil ko sukoon de"],
       ["हर पल तेरे साथ का, एहसास दे", "Har pal tere saath ka, ehsaas de"],
       ["लड़ूँ भी, झगड़ूँ भी, फिर भी ये जानूँ", "Ladoon bhi, jhagdoon bhi, phir bhi ye jaanoon"],
       ["प्यार के जादू से, तू मुझको मना ले", "Pyaar ke jaadoo se, tu mujhko mana le"] ] },
-    { who: "Mumma", note: "pre-chorus", lines: [
+    { who: "Mumma", note: "pre-chorus", tune: "pre", lines: [
       ["मेरे नखरे, मेरी ख़्वाहिशें, तुम बिन कौन उठाए", "Mere nakhre, meri khwahishein, tum bin kaun uthaaye"],
       ["रब से बस ये माँगूँ, हर जनम तू ही आए", "Rab se bas ye maangoon, har janam tu hi aaye"] ] },
-    { who: "Everyone", note: "chorus", kind: "chorus", lines: [
+    { who: "Everyone", note: "chorus", kind: "chorus", tune: "chorus", lines: [
       ["तुम से ही घर, घर बनता है", "Tum se hi ghar, ghar banta hai"],
       ["तुम हँसो तो, ये घर हँसता है", "Tum hanso toh, ye ghar hansta hai"],
       ["मेरी उमर भी तुमको लग जाए", "Meri umar bhi tumko lag jaaye"],
       ["तुम बिन अपना, कोई जहाँ नहीं", "Tum bin apna, koi jahaan nahin"] ] },
-    { who: "Bhaiya", note: "verse 2", lines: [
+    { who: "Bhaiya", note: "verse 2", tune: "verse", lines: [
       ["आप हो हीरो इस घर के, मेरे और श्रिया के", "Aap ho hero is ghar ke, mere aur Shriya ke"],
       ["हर मोड़ पे आपने, थामा हाथ", "Har mod pe aapne, thaama haath"],
       ["आपसे सीखा, गिर के सँभलना", "Aapse seekha, gir ke sambhalna"],
       ["आपसे सीखा, चलना साथ", "Aapse seekha, chalna saath"] ] },
-    { who: "Bhaiya", note: "pre-chorus", lines: [
+    { who: "Bhaiya", note: "pre-chorus", tune: "pre", lines: [
       ["फ़ख़्र है हमको आप पे, पापा", "Fakhr hai humko aap pe, Papa"],
       ["अभी तो बहुत कुछ, सीखना है साथ", "Abhi toh bahut kuch, seekhna hai saath"] ] },
-    { who: "Shriya", note: "verse 3", lines: [
+    { who: "Shriya", note: "verse 3", tune: "verse", lines: [
       ["वो लंबी बातें, वो आपकी सीखें", "Wo lambi baatein, wo aapki seekhein"],
       ["आपको सताना, सबसे हसीं पल", "Aapko sataana, sabse haseen pal"],
       ["कह ना सकें हम, दिल की ये बातें", "Keh na sakein hum, dil ki ye baatein"],
       ["आप ही प्रेरणा, आप ही हर पल", "Aap hi prerna, aap hi har pal"] ] },
-    { who: "Shriya", note: "pre-chorus", lines: [
+    { who: "Shriya", note: "pre-chorus", tune: "pre", lines: [
       ["आप ख़ुश हो तो, हम ख़ुश रह पाते", "Aap khush ho toh, hum khush reh paate"],
       ["आप ही हमारे, सब कुछ हो", "Aap hi hamaare, sab kuch ho"] ] },
-    { who: "Leo & Shiro", note: "bridge, with a playful flute", lines: [
+    { who: "Leo & Shiro", note: "bridge, with a playful flute", tune: "bridge", lines: [
       ["दरवाज़े पे बैठे, राह तकें हर शाम", "Darwaaze pe baithe, raah takein har shaam"],
       ["दो नन्ही पूँछें, हिल हिल कहें तेरा नाम", "Do nanhi poonchhein, hil hil kahein tera naam"] ] },
-    { who: "Everyone", note: "last chorus, a step higher", kind: "chorus", lines: [
+    { who: "Everyone", note: "last chorus, a step higher", kind: "chorus", tune: "chorus", up: 2, lines: [
       ["तुम से ही घर, घर बनता है", "Tum se hi ghar, ghar banta hai"],
       ["तुम हँसो तो, ये घर हँसता है", "Tum hanso toh, ye ghar hansta hai"],
       ["तुम हमेशा स्वस्थ रहो, ख़ुश रहो", "Tum hamesha swasth raho, khush raho"],
       ["तुम्हारी ख़ुशी में, हमारी ख़ुशी है", "Tumhaari khushi mein, hamaari khushi hai"] ] },
-    { who: "Everyone", note: "outro", kind: "spoken", lines: [
+    { who: "Everyone", note: "outro", kind: "spoken", tune: "outro", up: 2, lines: [
       ["चौवन दीये, एक ही दुआ", "Chauvan diye, ek hi dua"],
       ["लव यू सो मच, पापा… हैप्पी 54th बर्थडे!", "Love you so much, Papa… Happy 54th birthday!"] ] },
   ];
@@ -1407,17 +1425,27 @@ Happy 54th birthday Papa!!</p></details>
     const box = $("verses"); box.innerHTML = "";
     $("lyrics").className = "lyrics " + script;
     $("scHi").setAttribute("aria-pressed", script === "hi"); $("scRo").setAttribute("aria-pressed", script === "ro");
-    SONG.forEach(v => {
+    SONG.forEach((v, si) => {
       const d = document.createElement("div"); d.className = "verse" + (v.kind ? " " + v.kind : "");
       const w = document.createElement("div"); w.className = "who"; w.textContent = v.who;
       const n = document.createElement("i"); n.textContent = v.note; w.appendChild(n);
-      const p = document.createElement("p"); p.textContent = v.lines.map(l => l[script === "hi" ? 0 : 1]).join("\n");
-      p.style.whiteSpace = "pre-line";
+      const p = document.createElement("p");
+      v.lines.forEach((l, li) => {
+        const sp = document.createElement("span"); sp.className = "ln"; sp.id = "ln-" + si + "-" + li;
+        sp.textContent = l[script === "hi" ? 0 : 1];
+        if (li) p.appendChild(document.createElement("br"));
+        p.appendChild(sp);
+      });
       d.append(w, p); box.appendChild(d);
     });
   }
-  $("scHi").onclick = () => { script = "hi"; try { localStorage.setItem("prr-script", script); } catch (e) {} renderSong(); };
-  $("scRo").onclick = () => { script = "ro"; try { localStorage.setItem("prr-script", script); } catch (e) {} renderSong(); };
+  function setScript(v) {
+    script = v; try { localStorage.setItem("prr-script", script); } catch (e) {}
+    renderSong();
+    if (P.on) { $("lyrics").classList.add("playing"); if (P.line && $("ln-" + P.line)) $("ln-" + P.line).classList.add("on"); }
+  }
+  $("scHi").onclick = () => setScript("hi");
+  $("scRo").onclick = () => setScript("ro");
   // Suno-style section tags, so an AI music app knows which part is which.
   const songText = () => SONG.map(v => "[" + (v.kind === "chorus" ? "Chorus" : v.kind === "spoken" ? (v.note === "outro" ? "Outro" : "Intro") : v.note.startsWith("verse") ? "Verse" : v.note.startsWith("bridge") ? "Bridge" : "Pre-Chorus") + "]\n" + v.lines.map(l => l[script === "hi" ? 0 : 1]).join("\n")).join("\n\n");
   async function copyText(t, done) {
@@ -1427,6 +1455,59 @@ Happy 54th birthday Papa!!</p></details>
   $("copyStyle").onclick = () => copyText($("styleText").textContent, "Style copied");
   $("copyLyrics").onclick = () => copyText(songText(), "Lyrics copied (" + (script === "hi" ? "Hindi" : "Roman") + ")");
   renderSong();
+
+  /* ---------- Playing our song ---------- */
+  // The song was composed and rendered to a file by tools/render-song.js (76 BPM, two bars a line,
+  // a four-bar intro, a two-bar interlude after the first chorus). The words light up on that same clock.
+  const SONG_FILE = "/_blob/5cbf54ba2bf6f8cfb0126590be7cdff5", BAR = 4 * 60 / 76, LEAD = .1;
+  const SONG_LINES = (() => {
+    const out = []; let bar = 4;
+    SONG.forEach((v, si) => { v.lines.forEach((_, li) => { out.push([bar * BAR + LEAD, si + "-" + li]); bar += 2; }); if (si === 3) bar += 2; });
+    out.push([bar * BAR + LEAD, ""]);
+    return out;
+  })();
+  const P = { on: false, line: "", audio: new Audio() };
+  P.audio.preload = "metadata"; P.audio.src = SONG_FILE;
+  function songTick() {
+    const t = P.audio.currentTime, d = P.audio.duration || 0;
+    let line = "";
+    for (const [st, k] of SONG_LINES) { if (t >= st) line = k; else break; }
+    if (line !== P.line) {
+      if (P.line && $("ln-" + P.line)) $("ln-" + P.line).classList.remove("on");
+      P.line = line;
+      const sp = line && $("ln-" + line);
+      if (sp) {
+        sp.classList.add("on");
+        const r = sp.getBoundingClientRect();
+        if (r.top < 80 || r.bottom > innerHeight - 80) sp.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }
+    $("songTime").textContent = mmss(t) + " / " + mmss(d);
+    $("songFill").style.width = (d ? Math.min(100, t / d * 100) : 0) + "%";
+  }
+  function songPlay() {
+    if (Y.playing || R.playing) stop();
+    P.audio.volume = $("vol").value / 100;
+    P.audio.play().then(() => { P.on = true; $("lyrics").classList.add("playing"); renderSongBtn(); })
+      .catch(() => toast("The song couldn't play. Check the connection and try again."));
+  }
+  function songStop(ended) {
+    if (!P.on) return;
+    P.on = false; P.audio.pause(); if (!ended) P.audio.currentTime = 0;
+    if (P.line && $("ln-" + P.line)) $("ln-" + P.line).classList.remove("on");
+    P.line = ""; $("lyrics").classList.remove("playing");
+    songTick(); renderSongBtn();
+  }
+  function renderSongBtn() {
+    $("songPlay").setAttribute("aria-pressed", P.on);
+    $("songPlayText").textContent = P.on ? "Stop" : "Play our song";
+    $("songIcon").innerHTML = P.on ? '<path d="M6 6h12v12H6z"/>' : '<path d="M8 5v14l11-7z"/>';
+  }
+  P.audio.addEventListener("timeupdate", songTick);
+  P.audio.addEventListener("loadedmetadata", songTick);
+  P.audio.addEventListener("ended", () => { songStop(true); P.audio.currentTime = 0; });
+  $("vol").addEventListener("input", e => { P.audio.volume = e.target.value / 100; });
+  $("songPlay").onclick = () => P.on ? songStop() : songPlay();
 
   /* ---------- Papa's Library ---------- */
   // Books are PDFs, plain-text files, or EPUBs in the asset store; each "books" row remembers where he stopped.

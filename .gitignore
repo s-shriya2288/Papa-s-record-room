@@ -1,2 +1,4 @@
 tools/press-record
 .DS_Store
+node_modules/
+*.wav

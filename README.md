@@ -10,6 +10,8 @@ Live page: https://claude.ai/artifact/6srz6H2Dz1aEBrgoVh1H7P
 - "Tum Se Hi Ghar": the family's birthday song for Papa's 54th, written from Mumma's, Bhaiya's, Shriya's (and Leo & Shiro's) words.
 - Papa's Library: a shelf of PDF, EPUB and text books with a reader in the page that reopens each book where he stopped.
 - `data/playlist-hindi.json`, `data/playlist-english.json`: Papa's YouTube Music playlists (319 Hindi, 100 English songs), as loaded into the page.
+- `media/`: the rendered song (`tum-se-hi-ghar.mp4`) and Papa's photo used in the song section.
+- `tools/render-song.js`: composes the song's tune and renders it to a WAV (`npm i node-web-audio-api@1 && node tools/render-song.js song.wav`), then `press-record` wraps it for the page.
 - `tools/press-record.swift`: wraps a song file (mp3, m4a, wav) in a small .mp4 so the page's storage accepts it.
 
 ## Converting a song
