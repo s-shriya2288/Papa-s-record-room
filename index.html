@@ -281,6 +281,14 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
 .rd-msg { color: var(--muted); align-self: center; text-align: center; max-width: 40ch; margin: auto; }
 .rd-pos { font-family: var(--mono); font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .rd-pos input { width: 64px; text-align: center; font-family: var(--mono); font-size: 14px; color: var(--paper); background: #120d0b; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+.rd-page article.ebook { white-space: normal; }
+.ebook h2 { font-family: Georgia, serif; font-size: 1.5em; line-height: 1.25; margin: 2.2em 0 .8em; text-align: center; }
+.ebook section:first-child h2 { margin-top: 0; }
+.ebook h3 { font-family: Georgia, serif; font-size: 1.15em; margin: 1.6em 0 .6em; }
+.ebook p { margin: 0 0 .9em; }
+.ebook hr { border: 0; text-align: center; margin: 2.4em 0; }
+.ebook hr::after { content: "· · ·"; color: #8a6d4f; }
+.rd-pos select { max-width: 42vw; font: inherit; font-size: 13px; color: var(--paper); background: #120d0b; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
 @media (max-width: 560px) { .rd-bar .btn .wide, .rd-foot .btn .wide { display: none; } .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 </style>
@@ -428,7 +436,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
         <label class="btn primary" id="addBook" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Add a book
-          <input type="file" id="bookInput" accept="application/pdf,.pdf,text/plain,.txt,.epub" multiple hidden>
+          <input type="file" id="bookInput" accept="application/pdf,.pdf,application/epub+zip,.epub,text/plain,.txt" multiple hidden>
         </label>
       </div>
     </div>
@@ -1262,7 +1270,8 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   renderPresets(); renderClock();
 
   /* ---------- Papa's Library ---------- */
-  // Books are PDFs or plain-text files in the asset store; each "books" row remembers where he stopped.
+  // Books are PDFs, plain-text files, or EPUBs in the asset store; each "books" row remembers where he stopped.
+  // The store doesn't take .epub files, so an EPUB is unpacked here into chapters of plain text (kind "epub", JSON).
   S.books = [];
   const B = { book: null, pdf: null, page: 1, task: null, zoom: 1, font: 19, saveT: null, covers: {}, coverQ: Promise.resolve() };
   try { B.zoom = +localStorage.getItem("prr-zoom") || 1; B.font = +localStorage.getItem("prr-font") || 19; } catch (e) {}
@@ -1279,6 +1288,72 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     });
     return pdfLib;
   }
+  let zipLib = null;
+  function loadZip() {
+    if (zipLib) return zipLib;
+    zipLib = new Promise((res, rej) => {
+      const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      sc.onload = () => res(window.JSZip); sc.onerror = () => { zipLib = null; rej(); };
+      document.head.appendChild(sc);
+    });
+    return zipLib;
+  }
+  const BLOCKS = new Set(["P", "DIV", "H1", "H2", "H3", "H4", "H5", "H6", "LI", "BLOCKQUOTE", "PRE", "SECTION", "ARTICLE", "UL", "OL", "TABLE", "TR", "TD", "TH", "DL", "DT", "DD", "FIGURE", "FIGCAPTION", "HEADER", "FOOTER", "ASIDE", "NAV", "MAIN", "HR", "BODY"]);
+  async function unpackEpub(file) {
+    const zip = await (await loadZip()).loadAsync(file);
+    const read = path => { const f = zip.file(path); if (!f) throw "missing"; return f.async("string"); };
+    const xml = t => new DOMParser().parseFromString(t, "application/xml");
+    const enc = zip.file("META-INF/encryption.xml");
+    if (enc && /EncryptionMethod[^>]+Algorithm="(?!http:\/\/www\.idpf\.org\/2008\/embedding|http:\/\/ns\.adobe\.com\/pdf\/enc#RC)/.test(await enc.async("string"))) throw "drm";
+    const opfPath = xml(await read("META-INF/container.xml")).querySelector("rootfile").getAttribute("full-path");
+    const dir = opfPath.includes("/") ? opfPath.slice(0, opfPath.lastIndexOf("/") + 1) : "";
+    const resolve = (base, href) => { const u = new URL(href, "http://x/" + base); return decodeURIComponent(u.pathname.slice(1)); };
+    const opf = xml(await read(opfPath));
+    const tag = (el, name) => [...el.getElementsByTagName("*")].filter(e => e.localName === name);
+    const meta = n => { const e = tag(opf, n)[0]; return e ? e.textContent.trim() : ""; };
+    const items = {}; tag(opf, "item").forEach(it => items[it.getAttribute("id")] = { href: resolve(dir, it.getAttribute("href")), type: it.getAttribute("media-type") || "", props: it.getAttribute("properties") || "" });
+    // Chapter names come from the table of contents (EPUB 3 nav, or the older NCX).
+    const names = {};
+    try {
+      const nav = Object.values(items).find(i => /\bnav\b/.test(i.props));
+      const ncx = Object.values(items).find(i => i.type === "application/x-dtbncx+xml");
+      if (nav) {
+        const d = new DOMParser().parseFromString(await read(nav.href), "application/xhtml+xml");
+        tag(d, "a").forEach(a => { const h = a.getAttribute("href"); if (h) { const k = resolve(nav.href, h.split("#")[0]); if (!names[k]) names[k] = a.textContent.trim(); } });
+      } else if (ncx) {
+        const d = xml(await read(ncx.href));
+        tag(d, "navPoint").forEach(np => { const c = tag(np, "content")[0], l = tag(np, "text")[0]; if (c && l) { const k = resolve(ncx.href, c.getAttribute("src").split("#")[0]); if (!names[k]) names[k] = l.textContent.trim(); } });
+      }
+    } catch (e) {}
+    const chapters = [];
+    for (const ref of tag(opf, "itemref")) {
+      const it = items[ref.getAttribute("idref")]; if (!it || !/html|xml/.test(it.type)) continue;
+      let doc;
+      try { const t = await read(it.href); doc = new DOMParser().parseFromString(t, "application/xhtml+xml"); if (doc.getElementsByTagName("parsererror").length) doc = new DOMParser().parseFromString(t, "text/html"); } catch (e) { continue; }
+      const body = doc.body || tag(doc, "body")[0]; if (!body) continue;
+      const blocks = [];
+      (function walk(el) {
+        for (const n of el.children) {
+          const name = n.localName.toUpperCase();
+          if (name === "SCRIPT" || name === "STYLE") continue;
+          if (name === "HR") { blocks.push(["hr", ""]); continue; }
+          if (BLOCKS.has(name) && [...n.children].some(c => BLOCKS.has(c.localName.toUpperCase()))) { walk(n); continue; }
+          const text = n.textContent.replace(/\s+/g, " ").trim(); if (!text) continue;
+          blocks.push([/^H[1-6]$/.test(name) ? "h" : "p", text]);
+        }
+      })(body);
+      if (!blocks.length) continue;
+      chapters.push({ t: names[it.href] || "", b: blocks });
+    }
+    if (!chapters.length) throw "empty";
+    let cover = null;
+    try {
+      const cm = tag(opf, "meta").find(m => m.getAttribute("name") === "cover");
+      const ci = Object.values(items).find(i => /cover-image/.test(i.props)) || (cm && items[cm.getAttribute("content")]);
+      if (ci && /^image\/(jpeg|png|gif|webp)$/.test(ci.type)) cover = new Blob([await zip.file(ci.href).async("arraybuffer")], { type: ci.type });
+    } catch (e) {}
+    return { title: meta("title"), author: tag(opf, "creator").map(e => e.textContent.trim()).filter(Boolean).join(", "), chapters, cover };
+  }
   const progress = b => b.kind === "pdf" ? (b.pages ? Math.min(1, (b.pos || 1) / b.pages) : 0) : Math.min(1, b.pos || 0);
 
   function renderShelf() {
@@ -1287,7 +1362,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     $("libEmpty").hidden = n > 0; shelf.hidden = !n;
     if (!n) {
       $("libEmpty").innerHTML = !S.db ? "<strong>Books load when you open this page signed in to Claude.</strong>"
-        : S.assets ? "<strong>The shelf is empty.</strong> Tap <strong>Add a book</strong> and choose a PDF or a text file (up to 20 MB). It opens right here, on the page where he stopped."
+        : S.assets ? "<strong>The shelf is empty.</strong> Tap <strong>Add a book</strong> and choose a PDF, EPUB, or text file (up to 20 MB). It opens right here, on the page where he stopped."
         : "<strong>No books yet.</strong> Only people with edit access can add books.";
       return;
     }
@@ -1305,6 +1380,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       el.setAttribute("aria-label", b.title + (b.author ? " by " + b.author : ""));
       el.onclick = () => openBook(b);
       if (b.kind === "pdf") coverFor(b, cv);
+      else if (b.cover) { const img = new Image(); img.alt = ""; img.src = blobUrl(b.cover); cv.appendChild(img); }
       shelf.appendChild(el);
     });
   }
@@ -1325,7 +1401,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   }
 
   async function openBook(b) {
-    B.book = b; B.pdf = null;
+    B.book = b; B.pdf = null; B.chapSel = null; B.sections = [];
     $("rdTitle").textContent = b.title; $("rdAuthor").textContent = b.author || "";
     $("rdEdit").hidden = !(S.db && S.canEdit);
     $("rdCanvas").hidden = true; $("rdText").hidden = true; $("rdMsg").hidden = false; $("rdMsg").textContent = "Opening the book…";
@@ -1345,7 +1421,9 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
       } else {
         const text = await fetch(blobUrl(b.asset)).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(buf => new TextDecoder("utf-8").decode(buf));
         if (B.book !== b) return;
-        const art = $("rdText"); art.textContent = text; art.style.fontSize = B.font + "px";
+        const art = $("rdText"); art.style.fontSize = B.font + "px";
+        art.classList.toggle("ebook", b.kind === "epub");
+        if (b.kind === "epub") buildEbook(art, JSON.parse(text)); else art.textContent = text;
         $("rdMsg").hidden = true; art.hidden = false;
         const pg = $("rdPage");
         requestAnimationFrame(() => { pg.scrollTop = (b.pos || 0) * (pg.scrollHeight - pg.clientHeight); textPos(); });
@@ -1354,6 +1432,26 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     } catch (e) {
       $("rdMsg").textContent = "This book couldn't open. Check the connection and try again.";
     }
+  }
+  // Built with textContent only, so nothing inside a book can run as code on this page.
+  function buildEbook(art, book) {
+    art.innerHTML = ""; B.sections = [];
+    const sel = document.createElement("select"); sel.id = "rdChap"; sel.setAttribute("aria-label", "Chapter");
+    (book.chapters || []).forEach((ch, i) => {
+      const sec = document.createElement("section");
+      let first = true;
+      (ch.b || []).forEach(([k, t]) => {
+        const el = document.createElement(k === "h" ? (first ? "h2" : "h3") : k === "hr" ? "hr" : "p");
+        if (k !== "hr") el.textContent = t;
+        if (k === "h") first = false;
+        sec.appendChild(el);
+      });
+      art.appendChild(sec); B.sections.push(sec);
+      const name = ch.t || ((ch.b || []).find(x => x[0] === "h") || [])[1];
+      if (name) { const o = document.createElement("option"); o.value = i; o.textContent = name.slice(0, 60); sel.appendChild(o); }
+    });
+    B.chapSel = sel.options.length > 1 ? sel : null;
+    if (B.chapSel) sel.onchange = () => { const pg = $("rdPage"); pg.scrollTop = B.sections[+sel.value].offsetTop - 18; };
   }
   async function drawPage() {
     const doc = B.pdf; if (!doc) return;
@@ -1379,7 +1477,13 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
   function textPos() {
     const pg = $("rdPage"), span = pg.scrollHeight - pg.clientHeight;
     const f = span > 0 ? pg.scrollTop / span : 1;
-    $("rdPos").textContent = Math.round(f * 100) + "% read";
+    if (B.chapSel && B.book && B.book.kind === "epub") {
+      if (!B.chapSel.isConnected) { $("rdPos").innerHTML = ""; $("rdPos").append(B.chapSel, document.createElement("span")); }
+      let cur = 0; B.sections.forEach((sec, i) => { if (sec.offsetTop - 40 <= pg.scrollTop) cur = i; });
+      const opt = [...B.chapSel.options].filter(o => +o.value <= cur).pop();
+      if (opt && document.activeElement !== B.chapSel) B.chapSel.value = opt.value;
+      $("rdPos").lastChild.textContent = Math.round(f * 100) + "%";
+    } else $("rdPos").textContent = Math.round(f * 100) + "% read";
     $("rdPrev").disabled = pg.scrollTop <= 0; $("rdNext").disabled = f >= .999;
     return f;
   }
@@ -1435,7 +1539,9 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     let done = 0;
     for (const f of files) {
       const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name), isTxt = f.type === "text/plain" || /\.txt$/i.test(f.name);
-      if (!isPdf && !isTxt) { toast(f.name + " isn't a PDF or text file. EPUB books need to be saved as PDF first."); await new Promise(r => setTimeout(r, 2800)); continue; }
+      const isEpub = f.type === "application/epub+zip" || /\.epub$/i.test(f.name);
+      if (isEpub) { await addEpub(f) && done++; continue; }
+      if (!isPdf && !isTxt) { toast(f.name + " isn't a book file. Choose a PDF, EPUB, or text file."); await new Promise(r => setTimeout(r, 2800)); continue; }
       if (f.size > 20 * 1024 * 1024) { toast(f.name + " is over 20 MB."); await new Promise(r => setTimeout(r, 2500)); continue; }
       toast("Putting " + f.name + " on the shelf…");
       try {
@@ -1460,6 +1566,29 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     if (done) toast(done + (done === 1 ? " book is" : " books are") + " on the shelf. Tap one to start reading.");
   };
 
+  async function addEpub(f) {
+    toast("Unpacking " + f.name + "…");
+    try {
+      const book = await unpackEpub(f);
+      const blob = new Blob([JSON.stringify({ v: 1, chapters: book.chapters })], { type: "application/json" });
+      if (blob.size > 20 * 1024 * 1024) throw "too_large";
+      toast("Putting " + (book.title || f.name) + " on the shelf…");
+      const up = await S.assets.upload(blob, { type: "application/json" });
+      let cover = "";
+      if (book.cover && book.cover.size < 15 * 1024 * 1024) { try { cover = (await S.assets.upload(book.cover, { type: book.cover.type })).id; } catch (e) {} }
+      const title = (book.title || f.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ")).trim().slice(0, 140) || "Untitled";
+      await S.db.collection("books").add({ asset: up.id, kind: "epub", title, author: (book.author || "").slice(0, 140), cover, pos: 0, chapters: book.chapters.length, addedAt: Date.now() });
+      return true;
+    } catch (err) {
+      const code = err && (err.code || err);
+      toast(code === "drm" ? f.name + " is locked (DRM) by the store it came from, so it can't be opened here."
+        : code === "too_large" ? f.name + " is too big to store."
+        : f.name + " couldn't be read as an EPUB.");
+      await new Promise(r => setTimeout(r, 3000));
+      return false;
+    }
+  }
+
   $("rdEdit").onclick = () => {
     const b = B.book; if (!b) return;
     $("bkTitle").value = b.title || ""; $("bkAuthor").value = b.author || "";
@@ -1481,7 +1610,7 @@ footer { color: var(--muted); font-size: 13px; text-align: center; }
     if (!d.classList.contains("armed")) { d.classList.add("armed"); d.textContent = "Tap again to remove"; return; }
     try {
       await S.db.doc("books/" + b.id).delete();
-      if (S.assets) S.assets.delete(b.asset).catch(() => {});
+      if (S.assets) { S.assets.delete(b.asset).catch(() => {}); if (b.cover) S.assets.delete(b.cover).catch(() => {}); }
       $("bookModal").hidden = true; closeBook(); toast("Book removed");
     } catch (e) { toast("Couldn't remove the book."); }
   };
